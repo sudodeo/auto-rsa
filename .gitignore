@@ -10,3 +10,4 @@ test*
 *venv/
 .vscode/
 *.zip
+rsa_bot_users.db
