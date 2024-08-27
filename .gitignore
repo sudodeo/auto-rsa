@@ -1,0 +1,12 @@
+.env
+did.bin
+.DS_Store
+*.json
+*.pkl
+*.png
+__pycache__/
+src/
+test*
+*venv/
+.vscode/
+*.zip
