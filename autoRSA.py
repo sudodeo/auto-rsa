@@ -8,6 +8,8 @@ import sys
 import sqlite3
 import traceback
 
+from database import init_db
+
 # Check Python version (minimum 3.10)
 print("Python version:", sys.version)
 if sys.version_info < (3, 10):
@@ -50,7 +52,8 @@ except Exception as e:
 load_dotenv()
 
 # Database connection
-conn = sqlite3.connect('rsa_bot_users.db')
+init_db()
+conn = sqlite3.connect("rsa_bot_users.db")
 cursor = conn.cursor()
 
 # Global variables
@@ -81,7 +84,6 @@ DAY1_BROKERS = [
 DISCORD_BOT = False
 DOCKER_MODE = False
 DANGER_MODE = False
-
 
 # Account nicknames
 def nicknames(broker):
@@ -306,11 +308,18 @@ if __name__ == "__main__":
             raise Exception("DISCORD_TOKEN not found in .env file, please add it")
         if not os.environ["DISCORD_CHANNEL"]:
             raise Exception("DISCORD_CHANNEL not found in .env file, please add it")
+        if not os.environ["RSA_BOT_ROLE_ID"]:
+            raise Exception("RSA_BOT_ROLE_ID not found in .env file, please add it")
+        if not os.environ["RSA_ADMIN_ROLE_ID"]:
+            raise Exception("RSA_ADMIN_ROLE_ID not found in .env file, please add it")
         DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
         DISCORD_CHANNEL = int(os.getenv("DISCORD_CHANNEL"))
+        RSA_BOT_ROLE_ID = int(os.getenv("RSA_BOT_ROLE_ID"))
+        RSA_ADMIN_ROLE_ID = int(os.getenv("RSA_ADMIN_ROLE_ID"))
         # Initialize discord bot
         intents = discord.Intents.default()
         intents.message_content = True
+        intents.messages = True
         # Discord bot command prefix
         bot = commands.Bot(command_prefix="!", intents=intents)
         bot.remove_command("help")
@@ -332,11 +341,12 @@ if __name__ == "__main__":
         @bot.event
         async def on_disconnect():
             conn.close()
+
         # Process the message only if it's from the specified channel
         @bot.event
         async def on_message(message):
-            if message.channel.id == DISCORD_CHANNEL:
-                await bot.process_commands(message)
+            # if message.channel.id == DISCORD_CHANNEL:
+            await bot.process_commands(message)
 
         # Bot ping-pong
         @bot.command(name="ping")
@@ -346,20 +356,29 @@ if __name__ == "__main__":
 
         # Help command
         @bot.command()
+        @commands.has_role(RSA_BOT_ROLE_ID)
         async def help(ctx):
             # String of available commands
             await ctx.send(
-                "Available RSA commands:\n"
+                "Here's a list of commands on how to setup your RSA Bot.:\n\n"
+                # "Available RSA commands:\n"
                 "!ping\n"
                 "!help\n"
                 "!rsaadd (brokerage) (username/email) (password)\n"
-                "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
-                "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
-                "!restart"
+                # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
+                # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
+                # "!restart"
+
+                "Start by typing -rsaadd (brokerage) (username) (password)\n"
+                "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
+                "For Fennel just enter email -rsaadd fennel email\n"
+                "For Robinhood -rsaadd robinhood email password\n"
+                "For Public  etc\n"
             )
 
         # Main RSA command
         @bot.command(name="rsa")
+        @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def rsa(ctx, *args):
             discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
             event_loop = asyncio.get_event_loop()
@@ -395,6 +414,7 @@ if __name__ == "__main__":
 
         # Restart command
         @bot.command(name="restart")
+        @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def restart(ctx):
             print("Restarting...")
             print()
@@ -412,78 +432,91 @@ if __name__ == "__main__":
                 if not isinstance(ctx.channel, discord.DMChannel):
                     await ctx.send("This command can only be used via DM.")
                     return
+
                 broker = broker.lower()
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
-                # Add credentials to environment variable
-                broker_env_var = os.getenv(broker.upper())
-                new_credential = f"{username}:{password}"
+                # # Add credentials to environment variable
+                # broker_env_var = os.getenv(broker.upper())
+                # new_credential = f"{username}:{password}"
 
-                if broker_env_var:
-                    # Check for duplicate credentials
-                    credentials = broker_env_var.split(',')
-                    if new_credential in credentials:
-                        await ctx.send(f"Credentials for {broker} with username {username} already exist.")
-                        return
-                    broker_env_var += f",{new_credential}"
-                else:
-                    broker_env_var = new_credential
-                
-                # Set the new environment variable
-                os.environ[broker.upper()] = broker_env_var
+                # if broker_env_var:
+                #     # Check for duplicate credentials
+                #     credentials = broker_env_var.split(',')
+                #     if new_credential in credentials:
+                #         await ctx.send(f"Credentials for {broker} with username {username} already exist.")
+                #         return
+                #     broker_env_var += f",{new_credential}"
+                # else:
+                #     broker_env_var = new_credential
 
-                # Load the current .env file
-                with open('.env', 'r') as f:
-                    lines = f.readlines()
+                # # Set the new environment variable
+                # os.environ[broker.upper()] = broker_env_var
 
-                # Update the broker settings in the .env file
-                for i, line in enumerate(lines):
-                    if line.startswith(f"{broker.upper()}="):
-                        lines[i] = f"{broker.upper()}={broker_env_var}\n"
-                        break
-                else:
-                    lines.append(f"{broker.upper()}={broker_env_var}\n")
-                
-                # Save the updated .env file
-                with open('.env', 'w') as f:
-                    f.writelines(lines)
+                # # Load the current .env file
+                # with open('.env', 'r') as f:
+                #     lines = f.readlines()
 
-                cursor.execute('''
-                    SELECT * FROM credentials WHERE user_id = ? AND broker = ? AND username = ?
-                ''', (str(ctx.author.id), broker, username))
-                
+                # # Update the broker settings in the .env file
+                # for i, line in enumerate(lines):
+                #     if line.startswith(f"{broker.upper()}="):
+                #         lines[i] = f"{broker.upper()}={broker_env_var}\n"
+                #         break
+                # else:
+                #     lines.append(f"{broker.upper()}={broker_env_var}\n")
+
+                # # Save the updated .env file
+                # with open('.env', 'w') as f:
+                #     f.writelines(lines)
+
+                cursor.execute(
+                    """
+                    SELECT * FROM rsa_credentials WHERE user_id = ? AND broker = ? AND username = ?
+                """,
+                    (str(ctx.author.id), broker, username),
+                )
                 if cursor.fetchone():
-                    await ctx.send(f"Credentials for {broker} with username {username} already exist.")
+                    await ctx.send(
+                        f"Credentials for {broker} with username {username} already exist."
+                    )
                     return
 
-                cursor.execute('''
-                    INSERT INTO credentials (user_id, broker, username, password)
+                cursor.execute(
+                    """
+                    INSERT INTO rsa_credentials (user_id, broker, username, password)
                     VALUES (?, ?, ?, ?)
-                ''', (str(ctx.author.id), broker, username, password))
+                """,
+                    (str(ctx.author.id), broker, username, password),
+                )
 
                 conn.commit()
                 await ctx.send(f"Successfully added {broker} account")
-            
+
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error adding {broker} account: {e}")
-        
+
         @bot.command(name="removersa")
-        @commands.has_role('staff')
+        @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def removersa(ctx, broker, username):
             try:
                 broker = broker.lower()
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
-                cursor.execute('''
-                    DELETE FROM credentials WHERE user_id = ? AND broker = ? AND username = ?
-                ''', (str(ctx.author.id), broker, username))
+                cursor.execute(
+                    """
+                    DELETE FROM rsa_credentials WHERE user_id = ? AND broker = ? AND username = ?
+                """,
+                    (str(ctx.author.id), broker, username),
+                )
 
                 if cursor.rowcount > 0:
                     conn.commit()
-                    await ctx.send(f"Successfully removed {username}'s account from {broker}.")
+                    await ctx.send(
+                        f"Successfully removed {username}'s account from {broker}."
+                    )
                 else:
                     await ctx.send(f"No account found for {username} with {broker}.")
 
@@ -535,14 +568,18 @@ if __name__ == "__main__":
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error retrieving accounts: {e}")
-        
+
         @bot.command(name="accountrsa")
+        @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def accountrsa(ctx):
             try:
                 accounts = []
-                cursor.execute('''
-                    SELECT broker, username FROM credentials WHERE user_id = ?
-                ''', (str(ctx.author.id),))
+                cursor.execute(
+                    """
+                    SELECT broker, username FROM rsa_credentials WHERE user_id = ?
+                """,
+                    (str(ctx.author.id),),
+                )
                 accounts = cursor.fetchall()
 
                 # # Check all supported brokers
@@ -554,12 +591,17 @@ if __name__ == "__main__":
 
                 if accounts:
                     # Prepare the message
-                    account_message = "Here are the accounts you have set up:\n" + "\n".join(accounts)
+                    account_message = (
+                        "Here are the accounts you have set up:\n" + "\n".join(accounts)
+                    )
 
                     # Handle Discord's 2000 character limit
                     if len(account_message) > 2000:
                         # Split the message into chunks of less than 2000 characters
-                        parts = [account_message[i:i + 2000] for i in range(0, len(account_message), 2000)]
+                        parts = [
+                            account_message[i : i + 2000]
+                            for i in range(0, len(account_message), 2000)
+                        ]
                         for part in parts:
                             await ctx.send(part)
                     else:
