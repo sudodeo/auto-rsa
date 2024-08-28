@@ -83,6 +83,7 @@ DISCORD_BOT = False
 DOCKER_MODE = False
 DANGER_MODE = False
 
+
 # Account nicknames
 def nicknames(broker):
     if broker in ["fid", "fido"]:
@@ -348,7 +349,7 @@ if __name__ == "__main__":
 
         # Help command
         @bot.command()
-        @commands.has_role(RSA_BOT_ROLE_ID)
+        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
         async def help(ctx):
             # String of available commands
             await ctx.send(
@@ -360,7 +361,6 @@ if __name__ == "__main__":
                 # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
                 # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
-
                 "Start by typing -rsaadd (brokerage) (username) (password)\n"
                 "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
                 "For Fennel just enter email -rsaadd fennel email\n"
