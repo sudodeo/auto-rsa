@@ -350,7 +350,7 @@ if __name__ == "__main__":
         # Help command
         @bot.command()
         @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
-        async def help(ctx):
+        async def helprsa(ctx):
             # String of available commands
             await ctx.send(
                 "Here's a list of commands on how to setup your RSA Bot.:\n\n"
