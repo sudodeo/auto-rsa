@@ -8,7 +8,10 @@ import sys
 import sqlite3
 import traceback
 
+import discord.ext.commands
+
 from database import init_db
+import discord.ext
 
 # Check Python version (minimum 3.10)
 print("Python version:", sys.version)
@@ -610,11 +613,12 @@ if __name__ == "__main__":
         # Catch bad commands
         @bot.event
         async def on_command_error(ctx, error):
-            print(f"Command Error: {error}")
-            await ctx.send(f"Command Error: {error}")
-            # Print help command
-            print("Type '!help' for a list of commands")
-            await ctx.send("Type '!help' for a list of commands")
+            if not isinstance(error, discord.ext.commands.CommandNotFound):
+                print(f"Command Error: {error}")
+                await ctx.send(f"Command Error: {error}")
+                # Print help command
+                # print("Type '!help' for a list of commands")
+                await ctx.send("Type '!helprsa' for a list of commands")
 
         # Run Discord bot
         bot.run(DISCORD_TOKEN)
