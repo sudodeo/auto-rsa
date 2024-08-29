@@ -8,7 +8,8 @@ import sys
 import sqlite3
 import traceback
 
-from database import init_db
+import discord.ext.commands
+import discord.ext
 
 # Check Python version (minimum 3.10)
 print("Python version:", sys.version)
@@ -38,7 +39,6 @@ try:
     from robinhoodAPI import *
     from schwabAPI import *
     from tastyAPI import *
-    from tornadoAPI import *
     from tradierAPI import *
     from vanguardAPI import *
     from webullAPI import *
@@ -52,9 +52,22 @@ except Exception as e:
 load_dotenv()
 
 # Database connection
-init_db()
 conn = sqlite3.connect("rsa_bot_users.db")
 cursor = conn.cursor()
+
+# Create a table for storing credentials if it doesn't exist
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS rsa_credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    broker TEXT NOT NULL,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL
+)
+"""
+)
+conn.commit()
 
 # Global variables
 SUPPORTED_BROKERS = [
@@ -66,7 +79,6 @@ SUPPORTED_BROKERS = [
     "robinhood",
     "schwab",
     "tastytrade",
-    "tornado",
     "tradier",
     "vanguard",
     "webull",
@@ -84,6 +96,7 @@ DAY1_BROKERS = [
 DISCORD_BOT = False
 DOCKER_MODE = False
 DANGER_MODE = False
+
 
 # Account nicknames
 def nicknames(broker):
@@ -120,12 +133,6 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                         globals()[fun_name](
                             DOCKER=DOCKER_MODE, botObj=botObj, loop=loop
                         ),
-                        broker,
-                    )
-                elif broker.lower() == "tornado":
-                    # Requires docker mode argument and loop
-                    orderObj.set_logged_in(
-                        globals()[fun_name](DOCKER=DOCKER_MODE, loop=loop),
                         broker,
                     )
                 elif broker.lower() in ["fennel", "firstrade", "public"]:
@@ -356,8 +363,8 @@ if __name__ == "__main__":
 
         # Help command
         @bot.command()
-        @commands.has_role(RSA_BOT_ROLE_ID)
-        async def help(ctx):
+        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
+        async def helprsa(ctx):
             # String of available commands
             await ctx.send(
                 "Here's a list of commands on how to setup your RSA Bot.:\n\n"
@@ -368,7 +375,6 @@ if __name__ == "__main__":
                 # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
                 # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
-
                 "Start by typing -rsaadd (brokerage) (username) (password)\n"
                 "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
                 "For Fennel just enter email -rsaadd fennel email\n"
@@ -618,11 +624,12 @@ if __name__ == "__main__":
         # Catch bad commands
         @bot.event
         async def on_command_error(ctx, error):
-            print(f"Command Error: {error}")
-            await ctx.send(f"Command Error: {error}")
-            # Print help command
-            print("Type '!help' for a list of commands")
-            await ctx.send("Type '!help' for a list of commands")
+            if not isinstance(error, discord.ext.commands.CommandNotFound):
+                print(f"Command Error: {error}")
+                await ctx.send(f"Command Error: {error}")
+                # Print help command
+                # print("Type '!help' for a list of commands")
+                await ctx.send("Type '!helprsa' for a list of commands")
 
         # Run Discord bot
         bot.run(DISCORD_TOKEN)
