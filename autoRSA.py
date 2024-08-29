@@ -433,10 +433,17 @@ if __name__ == "__main__":
                 "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
                 "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
-                "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
-                "For Fennel just enter email -rsaadd fennel email\n"
-                "For Robinhood -rsaadd robinhood email password\n"
-                "For Public  etc\n"
+                "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234`"
+                "For Fennel just enter email `!rsaadd fennel email`\n"
+                "For Fidelity `!rsaadd fidelity username:password`\n"
+                "For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`\n"
+                "For Public `!rsaadd public username:password`\n"
+                "For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`\t\t without 2fa: `!rsaadd robinhood username:password:NA"
+                "For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`\t\t without 2fa: `!rsaadd schwab username:password:NA"
+                "For Tradier `!rsaadd tradier tradier_access_token`\n"
+                "For Tastytrade `!rsaadd tastytrade username:password`\n"
+                "For Vanguard: Also include the last 4 of your phone number after the password so `!rsaadd vanguard username:password:7890`\n"
+                "For Webull `!rsaadd webull username:password:device_id:trading_pin`\n"
             )
 
         # Main RSA command
@@ -503,10 +510,42 @@ if __name__ == "__main__":
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
-                if len(credentials.split(":")) != 2:
-                    raise Exception(
-                        "invalid credentials. pass in your credentials using this format **username:password**"
-                    )
+                # Handle different broker-specific credential formats
+                if broker == "chase":
+                    if len(credentials.split(":")) != 3:
+                        raise Exception(
+                            "Invalid credentials. Use this format: username:password:last4digits"
+                        )
+                elif broker == "fennel":
+                    if "@" not in credentials or len(credentials.split(":")) != 1:
+                        raise Exception(
+                            "Invalid credentials. Just enter your email for Fennel."
+                        )
+                elif broker in ["firstrade", "robinhood", "schwab"]:
+                    if len(credentials.split(":")) != 3:
+                        raise Exception(
+                            f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret"
+                        )
+                elif broker == "tradier":
+                    if len(credentials.split(":")) != 1:
+                        raise Exception(
+                            "Invalid credentials. Just enter your Tradier access token."
+                        )
+                elif broker == "vanguard":
+                    if len(credentials.split(":")) != 3:
+                        raise Exception(
+                            "Invalid credentials. Use this format: username:password:last4digits"
+                        )
+                elif broker == "webull":
+                    if len(credentials.split(":")) != 4:
+                        raise Exception(
+                            "Invalid credentials. Use this format: username:password:device_id:trading_pin"
+                        )
+                else:
+                    if len(credentials.split(":")) != 2:
+                        raise Exception(
+                            "Invalid credentials. Use this format: username:password"
+                        )
 
                 encrypted_credentials = cipher_suite.encrypt(
                     credentials.encode()
@@ -545,6 +584,7 @@ if __name__ == "__main__":
                 print(traceback.format_exc())
                 await ctx.send(f"Error adding {broker} account: {e}")
 
+
         @bot.command(name="removersa")
         @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def removersa(ctx, broker, username):
@@ -567,49 +607,6 @@ if __name__ == "__main__":
                     )
                 else:
                     await ctx.send(f"No account found for {username} with {broker}.")
-
-                # # Retrieve the current credentials
-                # broker_env_var = os.getenv(broker.upper())
-                # if not broker_env_var:
-                #     await ctx.send(f"No credentials found for {broker}.")
-                #     return
-
-                # credentials = broker_env_var.split(',')
-                # credential_to_remove = None
-
-                # # Find the credential to remove
-                # for cred in credentials:
-                #     if cred.startswith(f"{username}:"):
-                #         credential_to_remove = cred
-                #         break
-
-                # if credential_to_remove:
-                #     credentials.remove(credential_to_remove)
-
-                #     # Update the environment variable
-                #     new_broker_env_var = ",".join(credentials)
-                #     os.environ[broker.upper()] = new_broker_env_var if new_broker_env_var else None
-
-                #     # Load the current .env file
-                #     with open('.env', 'r') as f:
-                #         lines = f.readlines()
-
-                #     # Update or remove the broker entry in the .env file
-                #     for i, line in enumerate(lines):
-                #         if line.startswith(f"{broker.upper()}="):
-                #             if new_broker_env_var:
-                #                 lines[i] = f"{broker.upper()}={new_broker_env_var}\n"
-                #             else:
-                #                 lines.pop(i)  # Remove the broker entry if no credentials are left
-                #             break
-
-                #     # Save the updated .env file
-                #     with open('.env', 'w') as f:
-                #         f.writelines(lines)
-
-                #     await ctx.send(f"Successfully removed {username}'s account from {broker}")
-                # else:
-                #     await ctx.send(f"No account found for {username} with {broker}")
 
             except commands.MissingRole:
                 await ctx.send("You do not have the required role to run this command.")
