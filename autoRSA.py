@@ -433,7 +433,6 @@ if __name__ == "__main__":
                 "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
                 "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
-                "Start by typing -rsaadd (brokerage) (username) (password)\n"
                 "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
                 "For Fennel just enter email -rsaadd fennel email\n"
                 "For Robinhood -rsaadd robinhood email password\n"
