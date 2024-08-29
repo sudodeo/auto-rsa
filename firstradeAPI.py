@@ -21,13 +21,17 @@ from helperAPI import (
 )
 
 
-def firstrade_init(botObj=None, loop=None):
+def firstrade_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
-    if not os.getenv("FIRSTRADE"):
+    if not os.getenv("FIRSTRADE") and EXTERNAL_CREDENTIALS is None:
         print("Firstrade not found, skipping...")
         return None
-    accounts = os.environ["FIRSTRADE"].strip().split(",")
+    accounts = (
+        os.environ["FIRSTRADE"].strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
+    )
     # Log in to Firstrade account
     print("Logging in to Firstrade...")
     firstrade_obj = Brokerage("Firstrade")

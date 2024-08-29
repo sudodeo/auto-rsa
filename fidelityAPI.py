@@ -51,17 +51,17 @@ def javascript_get_classname(driver: webdriver, className) -> list:
     return text
 
 
-def fidelity_init(FIDELITY_EXTERNAL=None, DOCKER=False, botObj=None, loop=None):
+def fidelity_init(EXTERNAL_CREDENTIALS=None, DOCKER=False, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     # Import Fidelity account
-    if not os.getenv("FIDELITY") and FIDELITY_EXTERNAL is None:
+    if not os.getenv("FIDELITY") and EXTERNAL_CREDENTIALS is None:
         print("Fidelity not found, skipping...")
         return None
     accounts = (
         os.environ["FIDELITY"].strip().split(",")
-        if FIDELITY_EXTERNAL is None
-        else FIDELITY_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     fidelity_obj = Brokerage("Fidelity")
     # Init webdriver

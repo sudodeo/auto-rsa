@@ -20,18 +20,18 @@ from helperAPI import (
 
 
 def chase_run(
-    orderObj: stockOrder, command=None, botObj=None, loop=None, CHASE_EXTERNAL=None
+    orderObj: stockOrder, command=None, botObj=None, loop=None, EXTERNAL_CREDENTIALS=None
 ):
     # Initialize .env file
     load_dotenv()
     # Import Chase account
-    if not os.getenv("CHASE") and CHASE_EXTERNAL is None:
+    if not os.getenv("CHASE") and EXTERNAL_CREDENTIALS is None:
         print("Chase not found, skipping...")
         return None
     accounts = (
         os.environ["CHASE"].strip().split(",")
-        if CHASE_EXTERNAL is None
-        else CHASE_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Get headless flag
     headless = os.getenv("HEADLESS", "true").lower() == "true"

@@ -15,18 +15,18 @@ from helperAPI import (
 )
 
 
-def public_init(PUBLIC_EXTERNAL=None, botObj=None, loop=None):
+def public_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     # Import Public account
     public_obj = Brokerage("Public")
-    if not os.getenv("PUBLIC_BROKER") and PUBLIC_EXTERNAL is None:
+    if not os.getenv("PUBLIC_BROKER") and EXTERNAL_CREDENTIALS is None:
         print("Public not found, skipping...")
         return None
     PUBLIC = (
         os.environ["PUBLIC_BROKER"].strip().split(",")
-        if PUBLIC_EXTERNAL is None
-        else PUBLIC_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Public account
     print("Logging in to Public...")

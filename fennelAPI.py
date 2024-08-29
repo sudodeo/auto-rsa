@@ -14,18 +14,18 @@ from helperAPI import (
 )
 
 
-def fennel_init(FENNEL_EXTERNAL=None, botObj=None, loop=None):
+def fennel_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     # Import Fennel account
     fennel_obj = Brokerage("Fennel")
-    if not os.getenv("FENNEL") and FENNEL_EXTERNAL is None:
+    if not os.getenv("FENNEL") and EXTERNAL_CREDENTIALS is None:
         print("Fennel not found, skipping...")
         return None
     FENNEL = (
         os.environ["FENNEL"].strip().split(",")
-        if FENNEL_EXTERNAL is None
-        else FENNEL_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Fennel account
     print("Logging in to Fennel...")
