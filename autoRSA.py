@@ -9,8 +9,6 @@ import sqlite3
 import traceback
 
 import discord.ext.commands
-
-from database import init_db
 import discord.ext
 
 # Check Python version (minimum 3.10)
@@ -54,9 +52,22 @@ except Exception as e:
 load_dotenv()
 
 # Database connection
-init_db()
 conn = sqlite3.connect("rsa_bot_users.db")
 cursor = conn.cursor()
+
+# Create a table for storing credentials if it doesn't exist
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS rsa_credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    broker TEXT NOT NULL,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL
+)
+"""
+)
+conn.commit()
 
 # Global variables
 SUPPORTED_BROKERS = [
