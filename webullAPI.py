@@ -30,18 +30,18 @@ def place_order(obj: webull, account: str, orderObj: stockOrder, s: str):
 
 
 # Initialize Webull
-def webull_init(WEBULL_EXTERNAL=None):
+def webull_init(EXTERNAL_CREDENTIALS=None):
     # Initialize .env file
     load_dotenv()
     # Import Webull account
     wb_obj = Brokerage("Webull")
-    if not os.getenv("WEBULL") and WEBULL_EXTERNAL is None:
+    if not os.getenv("WEBULL") and EXTERNAL_CREDENTIALS is None:
         print("Webull not found, skipping...")
         return None
     accounts = (
         os.environ["WEBULL"].strip().split(",")
-        if WEBULL_EXTERNAL is None
-        else WEBULL_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     for index, account in enumerate(accounts):
         print("Logging in to Webull...")

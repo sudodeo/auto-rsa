@@ -20,14 +20,20 @@ from helperAPI import (
 )
 
 
-def vanguard_run(orderObj: stockOrder, command=None, botObj=None, loop=None):
+def vanguard_run(
+    orderObj: stockOrder, command=None, botObj=None, loop=None, EXTERNAL_CREDENTIALS=None
+):
     # Initialize .env file
     load_dotenv()
     # Import Vanguard account
-    if not os.getenv("VANGUARD"):
+    if not os.getenv("VANGUARD") and EXTERNAL_CREDENTIALS is None:
         print("Vanguard not found, skipping...")
         return None
-    accounts = os.environ["VANGUARD"].strip().split(",")
+    accounts = (
+        os.environ["VANGUARD"].strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
+    )
     # Get headless flag
     headless = os.getenv("HEADLESS", "true").lower() == "true"
     # Set the functions to be run

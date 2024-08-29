@@ -19,18 +19,18 @@ def login_with_cache(pickle_path, pickle_name):
     )
 
 
-def robinhood_init(ROBINHOOD_EXTERNAL=None):
+def robinhood_init(EXTERNAL_CREDENTIALS=None):
     # Initialize .env file
     load_dotenv()
     # Import Robinhood account
     rh_obj = Brokerage("Robinhood")
-    if not os.getenv("ROBINHOOD") and ROBINHOOD_EXTERNAL is None:
+    if not os.getenv("ROBINHOOD") and EXTERNAL_CREDENTIALS is None:
         print("Robinhood not found, skipping...")
         return None
     RH = (
         os.environ["ROBINHOOD"].strip().split(",")
-        if ROBINHOOD_EXTERNAL is None
-        else ROBINHOOD_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Robinhood account
     all_account_numbers = []

@@ -53,18 +53,18 @@ def make_request(
         return None
 
 
-def tradier_init(TRADIER_EXTERNAL=None):
+def tradier_init(EXTERNAL_CREDENTIALS=None):
     # Initialize .env file
     load_dotenv()
     # Import Tradier account
-    if not os.getenv("TRADIER") and TRADIER_EXTERNAL is None:
+    if not os.getenv("TRADIER") and EXTERNAL_CREDENTIALS is None:
         print("Tradier not found, skipping...")
         return None
     # Get access token and split into list
     accounts = (
         os.environ["TRADIER"].strip().split(",")
-        if TRADIER_EXTERNAL is None
-        else TRADIER_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Login to each account
     tradier_obj = Brokerage("Tradier")
