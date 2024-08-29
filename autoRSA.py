@@ -10,6 +10,9 @@ import traceback
 
 import discord.ext.commands
 import discord.ext
+from cryptography.fernet import Fernet
+
+from database_queries import FIND_ONE_BROKER_CREDENTIALS_FOR_USER
 
 # Check Python version (minimum 3.10)
 print("Python version:", sys.version)
@@ -55,6 +58,17 @@ load_dotenv()
 conn = None
 cursor = None
 
+# Generate and store the encryption key (only once, or securely store it in your .env)
+if not os.getenv("ENCRYPTION_KEY"):
+    key = Fernet.generate_key()
+    with open(".env", "a") as f:
+        f.write(f"\nENCRYPTION_KEY={key.decode()}")
+    print("Encryption key generated and stored in .env file.")
+else:
+    key = os.getenv("ENCRYPTION_KEY").encode()
+
+cipher_suite = Fernet(key)
+
 # Global variables
 SUPPORTED_BROKERS = [
     "chase",
@@ -82,7 +96,7 @@ DAY1_BROKERS = [
 DISCORD_BOT = False
 DOCKER_MODE = False
 DANGER_MODE = False
-
+DATABASE_NAME = 'rsa_bot_users.db'
 
 # Account nicknames
 def nicknames(broker):
@@ -101,13 +115,42 @@ def nicknames(broker):
     return broker
 
 
+# Encrypt credentials before storing them
+def encrypt_credential(credential: str) -> str:
+    return cipher_suite.encrypt(credential.encode()).decode()
+
+
+# Decrypt credentials when retrieving them
+def decrypt_credential(encrypted_credential: str) -> str:
+    return cipher_suite.decrypt(encrypted_credential.encode()).decode()
+
+
 # Runs the specified function for each broker in the list
 # broker name + type of function
-def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
+def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
     if command in [("_init", "_holdings"), ("_init", "_transaction")]:
-        for broker in orderObj.get_brokers():
+        order_brokers = orderObj.get_brokers()
+        if len(order_brokers) == 0:
+            printAndDiscord("No brokers to run", loop)
+        for broker in order_brokers:
             if broker in orderObj.get_notbrokers():
                 continue
+            # Create a new SQLite connection and cursor within this thread
+            connection = sqlite3.connect(DATABASE_NAME)
+            cursor = connection.cursor()
+
+            cursor.execute(
+                FIND_ONE_BROKER_CREDENTIALS_FOR_USER,
+                (str(author_id), broker),
+            )
+            encrypted_credentials = cursor.fetchone()
+            if not encrypted_credentials:
+                print(f"{broker} account does not exist for user with id {author_id}, skipping...")
+                # TODO: send discord message to notify user
+                continue
+
+            decrypted_credentials = decrypt_credential(encrypted_credentials[0])
+
             broker = nicknames(broker)
             first_command, second_command = command
             try:
@@ -117,17 +160,27 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                     # Fidelity requires docker mode argument, botObj, and loop
                     orderObj.set_logged_in(
                         globals()[fun_name](
-                            DOCKER=DOCKER_MODE, botObj=botObj, loop=loop
+                            EXTERNAL_CREDENTIALS=decrypted_credentials,
+                            DOCKER=DOCKER_MODE,
+                            botObj=botObj,
+                            loop=loop,
                         ),
                         broker,
                     )
                 elif broker.lower() in ["fennel", "firstrade", "public"]:
                     # Requires bot object and loop
                     orderObj.set_logged_in(
-                        globals()[fun_name](botObj=botObj, loop=loop), broker
+                        globals()[fun_name](
+                            EXTERNAL_CREDENTIALS=decrypted_credentials,
+                            botObj=botObj,
+                            loop=loop,
+                        ),
+                        broker,
                     )
                 elif broker.lower() in ["chase", "vanguard"]:
                     fun_name = broker + "_run"
+                    fun_external = ""
+                    # if
                     # PLAYWRIGHT_BROKERS have to run all transactions with one function
                     th = ThreadHandler(
                         globals()[fun_name],
@@ -135,6 +188,7 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                         command=command,
                         botObj=botObj,
                         loop=loop,
+                        EXTERNAL_CREDENTIALS=decrypted_credentials,
                     )
                     th.start()
                     th.join()
@@ -146,7 +200,7 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                             + ": Function did not complete successfully."
                         )
                 else:
-                    orderObj.set_logged_in(globals()[fun_name](), broker)
+                    orderObj.set_logged_in(globals()[fun_name](), broker,EXTERNAL_CREDENTIALS=decrypted_credentials)
 
                 print()
                 if broker.lower() not in ["chase", "vanguard"]:
@@ -331,7 +385,7 @@ if __name__ == "__main__":
                 )
                 os._exit(1)  # Special exit code to restart docker container
             # Database connection
-            conn = sqlite3.connect("rsa_bot_users.db")
+            conn = sqlite3.connect(DATABASE_NAME)
             cursor = conn.cursor()
 
             # Create a table for storing credentials if it doesn't exist
@@ -341,8 +395,7 @@ if __name__ == "__main__":
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
                 broker TEXT NOT NULL,
-                username TEXT NOT NULL,
-                password TEXT NOT NULL
+                credentials TEXT NOT NULL
             )
             """
             )
@@ -377,8 +430,8 @@ if __name__ == "__main__":
                 "!ping\n"
                 "!help\n"
                 "!rsaadd (brokerage) (username/email) (password)\n"
-                # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
-                # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
+                "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
+                "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
                 "Start by typing -rsaadd (brokerage) (username) (password)\n"
                 "For Fidelity: Also include the last 4 of your phone number after the password so -rsaadd fidelity username password 1111\n"
@@ -394,6 +447,7 @@ if __name__ == "__main__":
             discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
             event_loop = asyncio.get_event_loop()
             try:
+                author_id = ctx.author.id
                 # Validate order object
                 discOrdObj.order_validate(preLogin=True)
                 # Get holdings or complete transaction
@@ -402,6 +456,7 @@ if __name__ == "__main__":
                     await bot.loop.run_in_executor(
                         None,
                         fun_run,
+                        author_id,
                         discOrdObj,
                         ("_init", "_holdings"),
                         bot,
@@ -412,6 +467,7 @@ if __name__ == "__main__":
                     await bot.loop.run_in_executor(
                         None,
                         fun_run,
+                        author_id,
                         discOrdObj,
                         ("_init", "_transaction"),
                         bot,
@@ -438,7 +494,7 @@ if __name__ == "__main__":
 
         # rsaadd command
         @bot.command(name="rsaadd")
-        async def rsaadd(ctx, broker, username, password):
+        async def rsaadd(ctx, broker, credentials):
             try:
                 if not isinstance(ctx.channel, discord.DMChannel):
                     await ctx.send("This command can only be used via DM.")
@@ -448,57 +504,39 @@ if __name__ == "__main__":
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
-                # # Add credentials to environment variable
-                # broker_env_var = os.getenv(broker.upper())
-                # new_credential = f"{username}:{password}"
-
-                # if broker_env_var:
-                #     # Check for duplicate credentials
-                #     credentials = broker_env_var.split(',')
-                #     if new_credential in credentials:
-                #         await ctx.send(f"Credentials for {broker} with username {username} already exist.")
-                #         return
-                #     broker_env_var += f",{new_credential}"
-                # else:
-                #     broker_env_var = new_credential
-
-                # # Set the new environment variable
-                # os.environ[broker.upper()] = broker_env_var
-
-                # # Load the current .env file
-                # with open('.env', 'r') as f:
-                #     lines = f.readlines()
-
-                # # Update the broker settings in the .env file
-                # for i, line in enumerate(lines):
-                #     if line.startswith(f"{broker.upper()}="):
-                #         lines[i] = f"{broker.upper()}={broker_env_var}\n"
-                #         break
-                # else:
-                #     lines.append(f"{broker.upper()}={broker_env_var}\n")
-
-                # # Save the updated .env file
-                # with open('.env', 'w') as f:
-                #     f.writelines(lines)
-
-                cursor.execute(
-                    """
-                    SELECT * FROM rsa_credentials WHERE user_id = ? AND broker = ? AND username = ?
-                """,
-                    (str(ctx.author.id), broker, username),
-                )
-                if cursor.fetchone():
-                    await ctx.send(
-                        f"Credentials for {broker} with username {username} already exist."
+                if len(credentials.split(":")) != 2:
+                    raise Exception(
+                        "invalid credentials. pass in your credentials using this format **username:password**"
                     )
-                    return
+
+                encrypted_credentials = cipher_suite.encrypt(
+                    credentials.encode()
+                ).decode()
 
                 cursor.execute(
                     """
-                    INSERT INTO rsa_credentials (user_id, broker, username, password)
-                    VALUES (?, ?, ?, ?)
+                    SELECT credentials FROM rsa_credentials WHERE user_id = ? AND broker = ?
                 """,
-                    (str(ctx.author.id), broker, username, password),
+                    (str(ctx.author.id), broker),
+                )
+
+                result = cursor.fetchone()
+                if result:
+                    decrypted_credentials = cipher_suite.decrypt(
+                        result[0].encode()
+                    ).decode()
+
+                    # Check for duplicates
+                    if credentials in decrypted_credentials.split(","):
+                        await ctx.send(f"Credentials for {broker} already exist.")
+                        return
+
+                cursor.execute(
+                    """
+                    INSERT INTO rsa_credentials (user_id, broker, credentials)
+                    VALUES (?, ?, ?)
+                """,
+                    (str(ctx.author.id), broker, encrypted_credentials),
                 )
 
                 conn.commit()
