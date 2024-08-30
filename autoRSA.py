@@ -437,7 +437,7 @@ if __name__ == "__main__":
                 "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
                 "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
                 # "!restart"
-                "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234`"
+                "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`"
                 "For Fennel just enter email `!rsaadd fennel email`\n"
                 "For Fidelity `!rsaadd fidelity username:password`\n"
                 "For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`\n"
@@ -516,9 +516,9 @@ if __name__ == "__main__":
 
                 # Handle different broker-specific credential formats
                 if broker == "chase":
-                    if len(credentials.split(":")) != 3:
+                    if len(credentials.split(":")) != 4:
                         raise Exception(
-                            "Invalid credentials. Use this format: username:password:last4digits"
+                            "Invalid credentials. Use this format: username:password:last4PhoneDigits:trueOrfalse"
                         )
                 elif broker == "fennel":
                     if "@" not in credentials or len(credentials.split(":")) != 1:
