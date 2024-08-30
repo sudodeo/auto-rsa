@@ -21,10 +21,15 @@ from helperAPI import (
 
 
 def vanguard_run(
-    orderObj: stockOrder, command=None, botObj=None, loop=None, EXTERNAL_CREDENTIALS=None
+    orderObj: stockOrder, command=None, botObj=None, loop=None, API_METADATA=None
 ):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Vanguard account
     if not os.getenv("VANGUARD") and EXTERNAL_CREDENTIALS is None:
         print("Vanguard not found, skipping...")
@@ -44,6 +49,7 @@ def vanguard_run(
         success = vanguard_init(
             account=account,
             index=index,
+            CURRENT_USER_ID=CURRENT_USER_ID,
             headless=headless,
             botObj=botObj,
             loop=loop,
@@ -57,7 +63,9 @@ def vanguard_run(
     return None
 
 
-def vanguard_init(account, index, headless=True, botObj=None, loop=None):
+def vanguard_init(
+    account, index, CURRENT_USER_ID, headless=True, botObj=None, loop=None
+):
     # Log in to Vanguard account
     print("Logging in to Vanguard...")
     vanguard_obj = Brokerage("VANGUARD")
@@ -77,7 +85,10 @@ def vanguard_init(account, index, headless=True, botObj=None, loop=None):
                 vg_session.login_two(input("Enter code: "))
             else:
                 sms_code = asyncio.run_coroutine_threadsafe(
-                    getOTPCodeDiscord(botObj, name, timeout=120, loop=loop), loop
+                    getOTPCodeDiscord(
+                        botObj, CURRENT_USER_ID, name, timeout=120, loop=loop
+                    ),
+                    loop,
                 ).result()
                 if sms_code is None:
                     raise Exception(

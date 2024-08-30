@@ -14,9 +14,14 @@ from helperAPI import (
 )
 
 
-def fennel_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
+def fennel_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Fennel account
     fennel_obj = Brokerage("Fennel")
     if not os.getenv("FENNEL") and EXTERNAL_CREDENTIALS is None:
@@ -51,7 +56,9 @@ def fennel_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
                     # Sometimes codes take a long time to arrive
                     timeout = 300  # 5 minutes
                     otp_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(botObj, name, timeout=timeout, loop=loop),
+                        getOTPCodeDiscord(
+                            botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
+                        ),
                         loop,
                     ).result()
                     if otp_code is None:

@@ -20,10 +20,15 @@ from helperAPI import (
 
 
 def chase_run(
-    orderObj: stockOrder, command=None, botObj=None, loop=None, EXTERNAL_CREDENTIALS=None
+    orderObj: stockOrder, command=None, botObj=None, loop=None, API_METADATA=None
 ):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Chase account
     if not os.getenv("CHASE") and EXTERNAL_CREDENTIALS is None:
         print("Chase not found, skipping...")
@@ -46,6 +51,7 @@ def chase_run(
         chase_details = chase_init(
             account=account,
             index=index,
+            CURRENT_USER_ID=CURRENT_USER_ID,
             headless=headless,
             botObj=botObj,
             loop=loop,
@@ -69,7 +75,14 @@ def get_account_id(account_connectors, value):
     return None
 
 
-def chase_init(account: str, index: int, headless=True, botObj=None, loop=None):
+def chase_init(
+    account: str,
+    index: int,
+    CURRENT_USER_ID: int,
+    headless=True,
+    botObj=None,
+    loop=None,
+):
     """
     Logs into chase. Checks for 2FA and gathers details on the chase accounts
 
@@ -110,7 +123,10 @@ def chase_init(account: str, index: int, headless=True, botObj=None, loop=None):
                 ch_session.login_two(input("Enter code: "))
             else:
                 sms_code = asyncio.run_coroutine_threadsafe(
-                    getOTPCodeDiscord(botObj, name, code_len=8, loop=loop), loop
+                    getOTPCodeDiscord(
+                        botObj, CURRENT_USER_ID, name, code_len=8, loop=loop
+                    ),
+                    loop,
                 ).result()
                 if sms_code is None:
                     raise Exception(f"Chase {index} code not received in time...", loop)

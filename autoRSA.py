@@ -150,6 +150,10 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                 continue
 
             decrypted_credentials = decrypt_credential(encrypted_credentials[0])
+            API_METADATA = {
+                "EXTERNAL_CREDENTIALS": decrypted_credentials,
+                "CURRENT_USER_ID": author_id,
+            }
 
             broker = nicknames(broker)
             first_command, second_command = command
@@ -160,7 +164,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                     # Fidelity requires docker mode argument, botObj, and loop
                     orderObj.set_logged_in(
                         globals()[fun_name](
-                            EXTERNAL_CREDENTIALS=decrypted_credentials,
+                            API_METADATA=API_METADATA,
                             DOCKER=DOCKER_MODE,
                             botObj=botObj,
                             loop=loop,
@@ -171,7 +175,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                     # Requires bot object and loop
                     orderObj.set_logged_in(
                         globals()[fun_name](
-                            EXTERNAL_CREDENTIALS=decrypted_credentials,
+                            API_METADATA=API_METADATA,
                             botObj=botObj,
                             loop=loop,
                         ),
@@ -188,7 +192,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                         command=command,
                         botObj=botObj,
                         loop=loop,
-                        EXTERNAL_CREDENTIALS=decrypted_credentials,
+                        API_METADATA=API_METADATA,
                     )
                     th.start()
                     th.join()
@@ -200,7 +204,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                             + ": Function did not complete successfully."
                         )
                 else:
-                    orderObj.set_logged_in(globals()[fun_name](), broker,EXTERNAL_CREDENTIALS=decrypted_credentials)
+                    orderObj.set_logged_in(globals()[fun_name](), broker,API_METADATA=API_METADATA)
 
                 print()
                 if broker.lower() not in ["chase", "vanguard"]:

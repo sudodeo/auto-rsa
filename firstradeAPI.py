@@ -21,9 +21,14 @@ from helperAPI import (
 )
 
 
-def firstrade_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
+def firstrade_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     if not os.getenv("FIRSTRADE") and EXTERNAL_CREDENTIALS is None:
         print("Firstrade not found, skipping...")
         return None
@@ -67,7 +72,10 @@ def firstrade_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
                     firstrade.login_two(input("Enter code: "))
                 else:
                     sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(botObj, name, timeout=300, loop=loop), loop
+                        getOTPCodeDiscord(
+                            botObj, CURRENT_USER_ID, name, timeout=300, loop=loop
+                        ),
+                        loop,
                     ).result()
                     if sms_code is None:
                         raise Exception(

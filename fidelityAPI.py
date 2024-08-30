@@ -51,9 +51,14 @@ def javascript_get_classname(driver: webdriver, className) -> list:
     return text
 
 
-def fidelity_init(EXTERNAL_CREDENTIALS=None, DOCKER=False, botObj=None, loop=None):
+def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Fidelity account
     if not os.getenv("FIDELITY") and EXTERNAL_CREDENTIALS is None:
         print("Fidelity not found, skipping...")
@@ -161,7 +166,9 @@ def fidelity_init(EXTERNAL_CREDENTIALS=None, DOCKER=False, botObj=None, loop=Non
                 timeout = 300  # 5 minutes
                 if botObj is not None and loop is not None:
                     sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(botObj, name, timeout=timeout, loop=loop),
+                        getOTPCodeDiscord(
+                            botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
+                        ),
                         loop,
                     ).result()
                     if sms_code is None:
