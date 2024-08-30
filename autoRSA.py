@@ -404,7 +404,7 @@ if __name__ == "__main__":
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
                 broker TEXT NOT NULL,
-                credentials TEXT NOT NULL
+                credentials TEXT NOT NULL,
                 CONSTRAINT unique_user_broker UNIQUE (user_id, broker)
             )
             """
