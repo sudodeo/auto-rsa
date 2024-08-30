@@ -20,6 +20,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromiumService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium_stealth import stealth
 
 load_dotenv()
@@ -515,6 +516,7 @@ def check_if_page_loaded(driver):
 def getDriver(DOCKER=False):
     # Init webdriver options
     try:
+        service = ChromiumService(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
         options.binary_location = "/usr/bin/google-chrome"
         options.add_argument("start-maximized")
@@ -536,7 +538,7 @@ def getDriver(DOCKER=False):
         driver = webdriver.Chrome(
             options=options,
             # Docker uses specific chromedriver installed via apt
-            service=ChromiumService("/usr/bin/chromedriver") if DOCKER else None,
+            service=service if DOCKER else None,
         )
 
         # Apply stealth settings
