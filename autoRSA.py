@@ -204,7 +204,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                         raise Exception(
                             "Error in "
                             + fun_name
-                            + ": Function did not complete successfully."
+                            + ": Function did not complete successfully. Error:" + err
                         )
                 else:
                     orderObj.set_logged_in(
