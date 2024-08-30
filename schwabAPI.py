@@ -40,7 +40,7 @@ def schwab_init(API_METADATA=None):
             schwab.login(
                 username=account[0],
                 password=account[1],
-                totp_secret=None if account[2] == "NA" else account[2],
+                totp_secret=None if account[2].upper() == "NA" else account[2],
             )
             account_info = schwab.get_account_info_v2()
             account_list = list(account_info.keys())
