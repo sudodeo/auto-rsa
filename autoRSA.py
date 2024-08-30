@@ -96,7 +96,8 @@ DAY1_BROKERS = [
 DISCORD_BOT = False
 DOCKER_MODE = False
 DANGER_MODE = False
-DATABASE_NAME = 'rsa_bot_users.db'
+DATABASE_NAME = "rsa_bot_users.db"
+
 
 # Account nicknames
 def nicknames(broker):
@@ -145,7 +146,9 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
             )
             encrypted_credentials = cursor.fetchone()
             if not encrypted_credentials:
-                print(f"{broker} account does not exist for user with id {author_id}, skipping...")
+                print(
+                    f"{broker} account does not exist for user with id {author_id}, skipping..."
+                )
                 # TODO: send discord message to notify user
                 continue
 
@@ -204,7 +207,9 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                             + ": Function did not complete successfully."
                         )
                 else:
-                    orderObj.set_logged_in(globals()[fun_name](), broker)
+                    orderObj.set_logged_in(
+                        globals()[fun_name](API_METADATA=API_METADATA), broker
+                    )
 
                 print()
                 if broker.lower() not in ["chase", "vanguard"]:
@@ -587,7 +592,6 @@ if __name__ == "__main__":
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error adding {broker} account: {e}")
-
 
         @bot.command(name="removersa")
         @commands.has_role(RSA_ADMIN_ROLE_ID)
