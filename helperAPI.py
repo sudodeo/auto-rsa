@@ -526,13 +526,18 @@ def getDriver(DOCKER=False):
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-gpu")
+
         if DOCKER or HEADLESS:
             options.add_argument("--headless")
+
+        # Initialize WebDriver
         driver = webdriver.Chrome(
             options=options,
             # Docker uses specific chromedriver installed via apt
             service=ChromiumService("/usr/bin/chromedriver") if DOCKER else None,
         )
+
+        # Apply stealth settings
         stealth(
             driver=driver,
             platform="Win32",
@@ -541,6 +546,7 @@ def getDriver(DOCKER=False):
     except Exception as e:
         print(f"Error getting Driver: {e}")
         return None
+
     return driver
 
 
@@ -622,41 +628,54 @@ async def processQueue():
 
 
 async def getOTPCodeDiscord(
-    botObj: commands.Bot, expected_user_id: int, brokerName, code_len=6, timeout=60, loop=None
+    botObj: commands.Bot,
+    expected_user_id: int,
+    brokerName,
+    code_len=6,
+    timeout=60,
+    loop=None,
 ):
     await printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
     await printAndDiscord(
         f"Please enter OTP code or type cancel within {timeout} seconds", loop
     )
-    
+
     # Get OTP code from Discord
     while True:
         try:
             code = await botObj.wait_for(
                 "message",
-                check=lambda m: m.author.id == expected_user_id and m.channel.id == int(os.getenv("DISCORD_CHANNEL")),
+                check=lambda m: m.author.id == expected_user_id
+                and m.channel.id == int(os.getenv("DISCORD_CHANNEL")),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
             await printAndDiscord(
-                f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>", loop
+                f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>",
+                loop,
             )
             return None
-        
+
         if code.content.lower() == "cancel":
-            await printAndDiscord(f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop)
+            await printAndDiscord(
+                f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop
+            )
             return None
-        
+
         try:
             int(code.content)  # Check if code is numbers only
         except ValueError:
-            await printAndDiscord("OTP code must be numbers only <@{expected_user_id}>", loop)
+            await printAndDiscord(
+                "OTP code must be numbers only <@{expected_user_id}>", loop
+            )
             continue
-        
+
         if len(code.content) != code_len:
-            await printAndDiscord(f"OTP code must be {code_len} digits <@{expected_user_id}>", loop)
+            await printAndDiscord(
+                f"OTP code must be {code_len} digits <@{expected_user_id}>", loop
+            )
             continue
-        
+
         return code.content
 
 
