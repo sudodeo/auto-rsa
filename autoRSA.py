@@ -204,7 +204,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                             + ": Function did not complete successfully."
                         )
                 else:
-                    orderObj.set_logged_in(globals()[fun_name](), broker,API_METADATA=API_METADATA)
+                    orderObj.set_logged_in(globals()[fun_name](), broker)
 
                 print()
                 if broker.lower() not in ["chase", "vanguard"]:
