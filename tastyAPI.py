@@ -47,9 +47,14 @@ def order_setup(tt: Session, order_type, stock_price, stock, amount):
     return new_order
 
 
-def tastytrade_init(EXTERNAL_CREDENTIALS=None):
+def tastytrade_init(API_METADATA=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Tastytrade account
     if not os.getenv("TASTYTRADE") and EXTERNAL_CREDENTIALS is None:
         print("Tastytrade not found, skipping...")

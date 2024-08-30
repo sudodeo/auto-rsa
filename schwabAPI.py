@@ -11,9 +11,14 @@ from schwab_api import Schwab
 from helperAPI import Brokerage, maskString, printAndDiscord, printHoldings, stockOrder
 
 
-def schwab_init(EXTERNAL_CREDENTIALS=None):
+def schwab_init(API_METADATA=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Schwab account
     if not os.getenv("SCHWAB") and EXTERNAL_CREDENTIALS is None:
         print("Schwab not found, skipping...")

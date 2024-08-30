@@ -15,9 +15,14 @@ from helperAPI import (
 )
 
 
-def public_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
+def public_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
+    EXTERNAL_CREDENTIALS = None
+    CURRENT_USER_ID = None
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Import Public account
     public_obj = Brokerage("Public")
     if not os.getenv("PUBLIC_BROKER") and EXTERNAL_CREDENTIALS is None:
@@ -55,7 +60,9 @@ def public_init(EXTERNAL_CREDENTIALS=None, botObj=None, loop=None):
                     # Sometimes codes take a long time to arrive
                     timeout = 300  # 5 minutes
                     sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(botObj, name, timeout=timeout, loop=loop),
+                        getOTPCodeDiscord(
+                            botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
+                        ),
                         loop,
                     ).result()
                     if sms_code is None:
