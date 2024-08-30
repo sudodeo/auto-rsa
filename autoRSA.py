@@ -405,6 +405,7 @@ if __name__ == "__main__":
                 user_id TEXT NOT NULL,
                 broker TEXT NOT NULL,
                 credentials TEXT NOT NULL
+                CONSTRAINT unique_user_broker UNIQUE (user_id, broker)
             )
             """
             )
@@ -581,9 +582,9 @@ if __name__ == "__main__":
                 cursor.execute(
                     """
                     INSERT INTO rsa_credentials (user_id, broker, credentials)
-                    VALUES (?, ?, ?)
+                    VALUES (?, ?, ?) ON CONFLICT (user_id, broker) DO UPDATE SET credentials = ? 
                 """,
-                    (str(ctx.author.id), broker, encrypted_credentials),
+                    (str(ctx.author.id), broker, encrypted_credentials,encrypted_credentials),
                 )
 
                 conn.commit()
