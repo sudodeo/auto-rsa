@@ -534,7 +534,7 @@ if __name__ == "__main__":
                 elif broker in ["firstrade", "robinhood", "schwab"]:
                     if len(credentials.split(":")) != 3:
                         raise Exception(
-                            f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret"
+                            f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret|NA"
                         )
                 elif broker == "tradier":
                     if len(credentials.split(":")) != 1:
@@ -560,24 +560,6 @@ if __name__ == "__main__":
                 encrypted_credentials = cipher_suite.encrypt(
                     credentials.encode()
                 ).decode()
-
-                cursor.execute(
-                    """
-                    SELECT credentials FROM rsa_credentials WHERE user_id = ? AND broker = ?
-                """,
-                    (str(ctx.author.id), broker),
-                )
-
-                result = cursor.fetchone()
-                if result:
-                    decrypted_credentials = cipher_suite.decrypt(
-                        result[0].encode()
-                    ).decode()
-
-                    # Check for duplicates
-                    if credentials in decrypted_credentials.split(","):
-                        await ctx.send(f"Credentials for {broker} already exist.")
-                        return
 
                 cursor.execute(
                     """
