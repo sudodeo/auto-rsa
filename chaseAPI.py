@@ -103,18 +103,18 @@ def chase_init(
     # Create brokerage class object and call it chase
     chase_obj = Brokerage("Chase")
     name = f"Chase {index}"
+    # Split the login into into seperate items
+    account = account.split(":")
+    # If the debug flag is present, use it, else set it to false
+    debug = bool(account[3]) if len(account) == 4 else False
+    # Create a ChaseSession class object which automatically configures and opens a browser
+    ch_session = session.ChaseSession(
+        title=f"chase_{index}",
+        headless=headless,
+        profile_path="./creds",
+        debug=debug,
+    )
     try:
-        # Split the login into into seperate items
-        account = account.split(":")
-        # If the debug flag is present, use it, else set it to false
-        debug = bool(account[3]) if len(account) == 4 else False
-        # Create a ChaseSession class object which automatically configures and opens a browser
-        ch_session = session.ChaseSession(
-            title=f"chase_{index}",
-            headless=headless,
-            profile_path="./creds",
-            debug=debug,
-        )
         # Login to chase
         need_second = ch_session.login(account[0], account[1], account[2])
         # If 2FA is present, ask for code
@@ -149,10 +149,11 @@ def chase_init(
             print_accounts.append(account.mask)
         print(f"The following Chase accounts were found: {print_accounts}")
     except Exception as e:
-        ch_session.close_browser()
         print(f"Error logging in to Chase: {e}")
         print(traceback.format_exc())
         return None
+    finally:
+        ch_session.close_browser()
     return [chase_obj, all_accounts]
 
 
@@ -167,15 +168,17 @@ def chase_holdings(chase_o: Brokerage, all_accounts: ch_account.AllAccount, loop
     """
     # Get holdings on each account. This loop only ever runs once.
     for key in chase_o.get_account_numbers():
-        try:
-            # Retrieve account masks and iterate through them
-            for _, account in enumerate(chase_o.get_account_numbers(key)):
+        # Retrieve account masks and iterate through them
+        for _, account in enumerate(chase_o.get_account_numbers(key)):
+            ch_session = None
+            try:
                 # Retrieve the chase session
                 ch_session: session.ChaseSession = chase_o.get_logged_in_objects(key)
                 # Get the account ID accociated with mask
                 account_id = get_account_id(all_accounts.account_connectors, account)
                 data = symbols.SymbolHoldings(account_id, ch_session)
                 success = data.get_holdings()
+                
                 if success:
                     for i, _ in enumerate(data.positions):
                         if (
@@ -206,13 +209,16 @@ def chase_holdings(chase_o: Brokerage, all_accounts: ch_account.AllAccount, loop
                                 ]
                                 qty = data.positions[i]["tradedUnitQuantity"]
                             chase_o.set_holdings(key, account, sym, qty, current_price)
-        except Exception as e:
-            ch_session.close_browser()
-            printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
-            print(traceback.format_exc())
-            continue
+            except Exception as e:
+                printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
+                print(traceback.format_exc())
+                continue
+            finally:
+                if ch_session:
+                    ch_session.close_browser()
         printHoldings(chase_o, loop)
-    ch_session.close_browser()
+    if ch_session:
+        ch_session.close_browser()
 
 
 def chase_transaction(
@@ -353,7 +359,8 @@ def chase_transaction(
                 printAndDiscord(f"{key} {account}: Error submitting order: {e}", loop)
                 print(traceback.format_exc())
                 continue
-    ch_session.close_browser()
+            finally:
+                ch_session.close_browser()
     printAndDiscord(
         "All Chase transactions complete",
         loop,
