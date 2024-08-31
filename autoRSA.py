@@ -457,7 +457,7 @@ if __name__ == "__main__":
 
         # Main RSA command
         @bot.command(name="rsa")
-        @commands.has_role(RSA_ADMIN_ROLE_ID)
+        @commands.has_role(RSA_BOT_ROLE_ID)
         async def rsa(ctx, *args):
             discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
             event_loop = asyncio.get_event_loop()
@@ -581,7 +581,7 @@ if __name__ == "__main__":
                 await ctx.send(f"Error adding {broker} account: {e}")
 
         @bot.command(name="removersa")
-        @commands.has_role(RSA_ADMIN_ROLE_ID)
+        @commands.has_any_role(RSA_BOT_ROLE_ID,RSA_ADMIN_ROLE_ID)
         async def removersa(ctx, broker, username):
             try:
                 broker = broker.lower()
