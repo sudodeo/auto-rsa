@@ -74,7 +74,7 @@ def vanguard_init(
         account = account.split(":")
         debug = bool(account[3]) if len(account) == 4 else False
         vg_session = session.VanguardSession(
-            title=f"Vanguard_{index}",
+            title=f"Vanguard_{CURRENT_USER_ID}_{index}",
             headless=headless,
             profile_path="./creds",
             debug=debug,

@@ -38,7 +38,7 @@ def firstrade_init(API_METADATA=None, botObj=None, loop=None):
         else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Firstrade account
-    print("Logging in to Firstrade...")
+    print(f"Logging in to Firstrade for user {CURRENT_USER_ID}...")
     firstrade_obj = Brokerage("Firstrade")
     for account in accounts:
         index = accounts.index(account) + 1
@@ -64,7 +64,7 @@ def firstrade_init(API_METADATA=None, botObj=None, loop=None):
                     if len(account[2]) > 14 and "@" not in account[2]
                     else None
                 ),
-                profile_path="./creds/",
+                profile_path=f"./creds/{CURRENT_USER_ID}/",
             )
             need_code = firstrade.login()
             if need_code:

@@ -41,7 +41,7 @@ def robinhood_init(API_METADATA=None):
     all_account_numbers = []
     for account in RH:
         index = RH.index(account) + 1
-        name = f"Robinhood {index}"
+        name = f"Robinhood {CURRENT_USER_ID} {index}"
         print(f"Logging in to {name}...")
         try:
             account = account.split(":")
@@ -53,7 +53,7 @@ def robinhood_init(API_METADATA=None):
                 ),
                 store_session=True,
                 expiresIn=86400 * 30,  # 30 days
-                pickle_path="./creds/",
+                pickle_path=f"./creds/{CURRENT_USER_ID}/",
                 pickle_name=name,
             )
             rh_obj.set_logged_in_object(name, rh)

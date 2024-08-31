@@ -33,11 +33,11 @@ def fennel_init(API_METADATA=None, botObj=None, loop=None):
         else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Fennel account
-    print("Logging in to Fennel...")
+    print(f"Logging in to Fennel for user {CURRENT_USER_ID}...")
     for index, account in enumerate(FENNEL):
         name = f"Fennel {index + 1}"
         try:
-            fb = Fennel(filename=f"fennel{index + 1}.pkl", path="./creds/")
+            fb = Fennel(filename=f"fennel_{CURRENT_USER_ID}_{index + 1}.pkl", path=f"./creds/{CURRENT_USER_ID}/")
             try:
                 if botObj is None and loop is None:
                     # Login from CLI
