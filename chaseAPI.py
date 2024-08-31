@@ -99,7 +99,7 @@ def chase_init(
         AllAccounts object which holds account information.
     """
     # Log in to Chase account
-    print("Logging in to Chase...")
+    print(f"Logging in to Chase for user {CURRENT_USER_ID}...")
     # Create brokerage class object and call it chase
     chase_obj = Brokerage("Chase")
     name = f"Chase {index}"
@@ -109,9 +109,9 @@ def chase_init(
     debug = bool(account[3]) if len(account) == 4 else False
     # Create a ChaseSession class object which automatically configures and opens a browser
     ch_session = session.ChaseSession(
-        title=f"chase_{index}",
+        title=f"chase_{CURRENT_USER_ID}_{index}",
         headless=headless,
-        profile_path="./creds",
+        profile_path=f"./creds/{CURRENT_USER_ID}/",
         debug=debug,
     )
     try:

@@ -34,12 +34,12 @@ def public_init(API_METADATA=None, botObj=None, loop=None):
         else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Log in to Public account
-    print("Logging in to Public...")
+    print(f"Logging in to Public for user {CURRENT_USER_ID}...")
     for index, account in enumerate(PUBLIC):
         name = f"Public {index + 1}"
         try:
             account = account.split(":")
-            pb = Public(filename=f"public{index + 1}.pkl", path="./creds/")
+            pb = Public(filename=f"public_{CURRENT_USER_ID}_{index + 1}.pkl", path=f"./creds/{CURRENT_USER_ID}/")
             try:
                 if botObj is None and loop is None:
                     # Login from CLI
