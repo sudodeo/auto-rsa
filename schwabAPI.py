@@ -37,11 +37,14 @@ def schwab_init(API_METADATA=None):
         try:
             account = account.split(":")
             schwab = Schwab(session_cache=f"./creds/schwab{index}.json")
-            schwab.login(
+            logged_in = schwab.login(
                 username=account[0],
                 password=account[1],
                 totp_secret=None if account[2].upper() == "NA" else account[2],
             )
+            if not logged_in:
+                raise Exception("Login failed")
+            print("getting account info...")
             account_info = schwab.get_account_info_v2()
             account_list = list(account_info.keys())
             print_accounts = [maskString(a) for a in account_list]
