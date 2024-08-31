@@ -149,7 +149,7 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                 print(
                     f"{broker} account does not exist for user with id {author_id}, skipping..."
                 )
-                # TODO: send discord message to notify user
+                printAndDiscord(f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM")
                 continue
 
             decrypted_credentials = decrypt_credential(encrypted_credentials[0])
