@@ -638,9 +638,9 @@ async def getOTPCodeDiscord(
     timeout=60,
     loop=None,
 ):
-    await printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
-    await printAndDiscord(
-        f"Please enter OTP code or type cancel within {timeout} seconds", loop
+    printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
+    printAndDiscord(
+        f"<@{expected_user_id}> Please enter OTP code or type cancel within {timeout} seconds", loop
     )
 
     # Get OTP code from Discord
@@ -653,14 +653,14 @@ async def getOTPCodeDiscord(
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
-            await printAndDiscord(
+            printAndDiscord(
                 f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>",
                 loop,
             )
             return None
 
         if code.content.lower() == "cancel":
-            await printAndDiscord(
+            printAndDiscord(
                 f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop
             )
             return None
@@ -668,13 +668,13 @@ async def getOTPCodeDiscord(
         try:
             int(code.content)  # Check if code is numbers only
         except ValueError:
-            await printAndDiscord(
+            printAndDiscord(
                 "OTP code must be numbers only <@{expected_user_id}>", loop
             )
             continue
 
         if len(code.content) != code_len:
-            await printAndDiscord(
+            printAndDiscord(
                 f"OTP code must be {code_len} digits <@{expected_user_id}>", loop
             )
             continue
