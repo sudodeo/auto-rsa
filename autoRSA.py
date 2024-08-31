@@ -201,11 +201,10 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                     th.join()
                     _, err = th.get_result()
                     if err is not None:
-                        raise Exception(
-                            "Error in "
-                            + fun_name
-                            + ": Function did not complete successfully. Error:" + err
+                        raise RuntimeError(
+                            f"Error in {fun_name}: Function did not complete successfully. Error: {err}"
                         )
+
                 else:
                     orderObj.set_logged_in(
                         globals()[fun_name](API_METADATA=API_METADATA), broker
@@ -566,7 +565,12 @@ if __name__ == "__main__":
                     INSERT INTO rsa_credentials (user_id, broker, credentials)
                     VALUES (?, ?, ?) ON CONFLICT (user_id, broker) DO UPDATE SET credentials = ? 
                 """,
-                    (str(ctx.author.id), broker, encrypted_credentials,encrypted_credentials),
+                    (
+                        str(ctx.author.id),
+                        broker,
+                        encrypted_credentials,
+                        encrypted_credentials,
+                    ),
                 )
 
                 conn.commit()
