@@ -133,6 +133,8 @@ def chase_init(
                 ch_session.login_two(sms_code)
         # Create an AllAccounts class object using the current browser session. Holds information about all accounts
         all_accounts = ch_account.AllAccount(ch_session)
+        if not all_accounts.account_connectors:
+            raise Exception("Failed to fetch investment data")
         # Get the account IDs and store in a list. The IDs are different than account numbers.
         account_ids = list(all_accounts.account_connectors.keys())
         print("Logged in to Chase!")
