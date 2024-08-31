@@ -518,7 +518,6 @@ def getDriver(DOCKER=False):
     try:
         service = ChromiumService(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
-        options.binary_location = "/usr/bin/google-chrome"
         options.add_argument("start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
