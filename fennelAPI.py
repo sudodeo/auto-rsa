@@ -14,7 +14,7 @@ from helperAPI import (
 )
 
 
-def fennel_init(API_METADATA=None, botObj=None, loop=None):
+async def fennel_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -37,7 +37,10 @@ def fennel_init(API_METADATA=None, botObj=None, loop=None):
     for index, account in enumerate(FENNEL):
         name = f"{CURRENT_USER_ID}-Fennel {index + 1}"
         try:
-            fb = Fennel(filename=f"fennel_{CURRENT_USER_ID}_{index + 1}.pkl", path=f"./creds/{CURRENT_USER_ID}/")
+            fb = Fennel(
+                filename=f"fennel_{CURRENT_USER_ID}_{index + 1}.pkl",
+                path=f"./creds/{CURRENT_USER_ID}/",
+            )
             try:
                 if botObj is None and loop is None:
                     # Login from CLI
@@ -55,19 +58,21 @@ def fennel_init(API_METADATA=None, botObj=None, loop=None):
                 if "2FA" in str(e) and botObj is not None and loop is not None:
                     # Sometimes codes take a long time to arrive
                     timeout = 300  # 5 minutes
-                    otp_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(
+                    try:
+                        otp_code = await getOTPCodeDiscord(
                             botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
-                        ),
-                        loop,
-                    ).result()
-                    if otp_code is None:
-                        raise Exception("No 2FA code found")
-                    fb.login(
-                        email=account,
-                        wait_for_code=False,
-                        code=otp_code,
-                    )
+                        )
+                        if otp_code is None:
+                            raise Exception("No 2FA code found")
+                        fb.login(
+                            email=account,
+                            wait_for_code=False,
+                            code=otp_code,
+                        )
+                    except Exception as e:
+                        print(f"Error logging in to Fennel(2FA): {e}")
+                        print(traceback.format_exc())
+                        continue
                 else:
                     raise e
             fennel_obj.set_logged_in_object(name, fb, "fb")
