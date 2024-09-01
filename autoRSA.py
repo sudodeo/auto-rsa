@@ -149,7 +149,9 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                 print(
                     f"{broker} account does not exist for user with id {author_id}, skipping..."
                 )
-                printAndDiscord(f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM")
+                printAndDiscord(
+                    f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM"
+                )
                 continue
 
             decrypted_credentials = decrypt_credential(encrypted_credentials[0])
@@ -159,10 +161,10 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
             }
 
             broker = nicknames(broker)
-            first_command, second_command = command
+            init_command, second_command = command
             try:
                 # Initialize broker
-                fun_name = broker + first_command
+                fun_name = broker + init_command
                 if broker.lower() == "fidelity":
                     # Fidelity requires docker mode argument, botObj, and loop
                     orderObj.set_logged_in(
@@ -434,25 +436,50 @@ if __name__ == "__main__":
         async def helprsa(ctx):
             # String of available commands
             await ctx.send(
-                "Here's a list of commands on how to setup your RSA Bot.:\n\n"
-                # "Available RSA commands:\n"
-                "!ping\n"
-                "!help\n"
-                "!rsaadd (brokerage) (username/email) (password)\n"
-                "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
-                "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
-                # "!restart"
-                "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`"
-                "For Fennel just enter email `!rsaadd fennel email`\n"
-                "For Fidelity `!rsaadd fidelity username:password`\n"
-                "For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`\n"
-                "For Public `!rsaadd public username:password`\n"
-                "For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`\t\t without 2fa: `!rsaadd robinhood username:password:NA"
-                "For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`\t\t without 2fa: `!rsaadd schwab username:password:NA"
-                "For Tradier `!rsaadd tradier tradier_access_token`\n"
-                "For Tastytrade `!rsaadd tastytrade username:password`\n"
-                "For Vanguard: Also include the last 4 of your phone number after the password so `!rsaadd vanguard username:password:7890`\n"
-                "For Webull `!rsaadd webull username:password:device_id:trading_pin`\n"
+                # "Here's a list of commands on how to setup your RSA Bot.:\n\n"
+                # # "Available RSA commands:\n"
+                # "!ping\n"
+                # "!help\n"
+                # "!rsaadd (brokerage) (username/email) (password)\n"
+                # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
+                # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
+                # # "!restart"
+                # "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`"
+                # "For Fennel just enter email `!rsaadd fennel email`\n"
+                # "For Fidelity `!rsaadd fidelity username:password`\n"
+                # "For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`\n"
+                # "For Public `!rsaadd public username:password`\n"
+                # "For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`\t\t without 2fa: `!rsaadd robinhood username:password:NA"
+                # "For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`\t\t without 2fa: `!rsaadd schwab username:password:NA"
+                # "For Tradier `!rsaadd tradier tradier_access_token`\n"
+                # "For Tastytrade `!rsaadd tastytrade username:password`\n"
+                # "For Vanguard: Also include the last 4 of your phone number after the password so `!rsaadd vanguard username:password:7890`\n"
+                # "For Webull `!rsaadd webull username:password:device_id:trading_pin`\n"
+                """
+                :emoney:  eMoney RSA Bot:
+
+Buying Stocks:
+- `!rsa buy 1 <STOCK> <BROKERAGE> false (Example: !rsa buy 1 ABCD Fidelity False)`
+- `!rsa buy 1 ABCD,OBLG,TOXV all false (Buys ABCD, OBLG, and TOXV on ALL accounts)`
+
+Selling Stocks:
+- `!rsa sell 1 <STOCK> <BROKERAGE> false (Example: !rsa sell 1 ABCD Fidelity False)`
+- `!rsa sell 1 ABCD,OBLG,TOXV all false (Sells ABCD, OBLG, and TOXV on ALL accounts)`
+
+View Holdings:
+- `!rsa holdings <brokerage> (Will view all stocks owned on that brokerage. Or type "all" to view ALL brokerages)`
+
+Adding Your Accounts:
+For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`
+For Fennel just enter email `!rsaadd fennel email`
+For Fidelity `!rsaadd fidelity username:password`
+For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`
+For Public `!rsaadd public username:password`
+For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`         without 2fa: `!rsaadd robinhood username:password:NA`
+For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`         without 2fa: `!rsaadd schwab username:password:NA`
+For Tradier `!rsaadd tradier tradier_access_token`
+For Tastytrade `!rsaadd tastytrade username:password`
+                """
             )
 
         # Main RSA command
@@ -581,7 +608,7 @@ if __name__ == "__main__":
                 await ctx.send(f"Error adding {broker} account: {e}")
 
         @bot.command(name="removersa")
-        @commands.has_any_role(RSA_BOT_ROLE_ID,RSA_ADMIN_ROLE_ID)
+        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
         async def removersa(ctx, broker, username):
             try:
                 broker = broker.lower()
