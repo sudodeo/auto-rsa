@@ -167,15 +167,13 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                 fun_name = broker + init_command
                 if broker.lower() == "fidelity":
                     # Fidelity requires docker mode argument, botObj, and loop
-                    orderObj.set_logged_in(
-                        globals()[fun_name](
-                            API_METADATA=API_METADATA,
-                            DOCKER=DOCKER_MODE,
-                            botObj=botObj,
-                            loop=loop,
-                        ),
-                        broker,
+                    result = globals()[fun_name](
+                        API_METADATA=API_METADATA,
+                        DOCKER=DOCKER_MODE,
+                        botObj=botObj,
+                        loop=loop,
                     )
+                    orderObj.set_logged_in(result, broker)
                 elif broker.lower() in ["fennel", "firstrade", "public"]:
                     # Requires bot object and loop
                     result = await globals()[fun_name](
@@ -186,8 +184,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                     orderObj.set_logged_in(result, broker)
                 elif broker.lower() in ["chase", "vanguard"]:
                     fun_name = broker + "_run"
-                    fun_external = ""
-                    # if
+
                     # PLAYWRIGHT_BROKERS have to run all transactions with one function
                     th = ThreadHandler(
                         globals()[fun_name],
