@@ -5,7 +5,7 @@
 import asyncio
 import os
 import sys
-import sqlite3
+import aiosqlite
 import traceback
 
 import discord.ext.commands
@@ -53,10 +53,6 @@ except Exception as e:
 
 # Initialize .env file
 load_dotenv()
-
-# Global database connection
-conn = None
-cursor = None
 
 # Generate and store the encryption key (only once, or securely store it in your .env)
 if not os.getenv("ENCRYPTION_KEY"):
@@ -128,23 +124,27 @@ def decrypt_credential(encrypted_credential: str) -> str:
 
 # Runs the specified function for each broker in the list
 # broker name + type of function
-def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
+async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
     if command in [("_init", "_holdings"), ("_init", "_transaction")]:
         order_brokers = orderObj.get_brokers()
         if len(order_brokers) == 0:
-            printAndDiscord("No brokers to run", loop)
+            printAndDiscord(f"<@{author_id}> No brokers to run", loop)
+            return
         for broker in order_brokers:
             if broker in orderObj.get_notbrokers():
                 continue
-            # Create a new SQLite connection and cursor within this thread
-            connection = sqlite3.connect(DATABASE_NAME)
-            cursor = connection.cursor()
 
-            cursor.execute(
-                FIND_ONE_BROKER_CREDENTIALS_FOR_USER,
-                (str(author_id), broker),
-            )
-            encrypted_credentials = cursor.fetchone()
+            # Use the bot's database connection
+            if botObj and hasattr(botObj, "db"):
+                db = botObj.db
+            else:
+                # Fallback to creating a new connection if bot object is not available
+                db = await aiosqlite.connect(DATABASE_NAME)
+
+            async with db.execute(
+                FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
+            ) as cursor:
+                encrypted_credentials = await cursor.fetchone()
             if not encrypted_credentials:
                 print(
                     f"{broker} account does not exist for user with id {author_id}, skipping..."
@@ -178,14 +178,12 @@ def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
                     )
                 elif broker.lower() in ["fennel", "firstrade", "public"]:
                     # Requires bot object and loop
-                    orderObj.set_logged_in(
-                        globals()[fun_name](
-                            API_METADATA=API_METADATA,
-                            botObj=botObj,
-                            loop=loop,
-                        ),
-                        broker,
+                    result = await globals()[fun_name](
+                        API_METADATA=API_METADATA,
+                        botObj=botObj,
+                        loop=loop,
                     )
+                    orderObj.set_logged_in(result, broker)
                 elif broker.lower() in ["chase", "vanguard"]:
                     fun_name = broker + "_run"
                     fun_external = ""
@@ -304,16 +302,20 @@ def argParser(args: list) -> stockOrder:
     return orderObj
 
 
-if __name__ == "__main__":
+async def main():
+    global DANGER_MODE, DOCKER_MODE, DISCORD_BOT
+
     # Determine if ran from command line
     if len(sys.argv) == 1:  # If no arguments, do nothing
         print("No arguments given, see README for usage")
-        sys.exit(1)
+        return
+
     # Check if danger mode is enabled
     if os.getenv("DANGER_MODE", "").lower() == "true":
         DANGER_MODE = True
         print("DANGER MODE ENABLED")
         print()
+
     # If docker argument, run docker bot
     if sys.argv[1].lower() == "docker":
         print("Running bot from docker")
@@ -348,15 +350,16 @@ if __name__ == "__main__":
             except KeyboardInterrupt:
                 print()
                 print("Exiting, no orders placed")
-                sys.exit(0)
+                return
+
         # Validate order object
         cliOrderObj.order_validate(preLogin=True)
+
         # Get holdings or complete transaction
         if cliOrderObj.get_holdings():
-            fun_run(cliOrderObj, ("_init", "_holdings"))
+            await fun_run(cliOrderObj, ("_init", "_holdings"))
         else:
-            fun_run(cliOrderObj, ("_init", "_transaction"))
-        sys.exit(0)
+            await fun_run(cliOrderObj, ("_init", "_transaction"))
 
     # If discord bot, run discord bot
     if DISCORD_BOT:
@@ -384,39 +387,39 @@ if __name__ == "__main__":
         print("Discord bot is started...")
         print()
 
+        # Initialize database connection
+        async def init_db():
+            bot.db = await aiosqlite.connect(DATABASE_NAME)
+            await bot.db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS rsa_credentials (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    broker TEXT NOT NULL,
+                    credentials TEXT NOT NULL,
+                    CONSTRAINT unique_user_broker UNIQUE (user_id, broker)
+                )
+            """
+            )
+            await bot.db.commit()
+
         # Bot event when bot is ready
         @bot.event
         async def on_ready():
-            global conn, cursor
             channel = bot.get_channel(DISCORD_CHANNEL)
             if channel is None:
                 print(
                     "ERROR: Invalid channel ID, please check your DISCORD_CHANNEL in your .env file and try again"
                 )
                 os._exit(1)  # Special exit code to restart docker container
-            # Database connection
-            conn = sqlite3.connect(DATABASE_NAME)
-            cursor = conn.cursor()
 
-            # Create a table for storing credentials if it doesn't exist
-            cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS rsa_credentials (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT NOT NULL,
-                broker TEXT NOT NULL,
-                credentials TEXT NOT NULL,
-                CONSTRAINT unique_user_broker UNIQUE (user_id, broker)
-            )
-            """
-            )
-            conn.commit()
+            await init_db()
             await channel.send("Discord bot is started...")
 
         @bot.event
         async def on_disconnect():
-            if conn:
-                conn.close()
+            if hasattr(bot, "db"):
+                await bot.db.close()
 
         # Process the message only if it's from the specified channel
         @bot.event
@@ -495,26 +498,24 @@ For Tastytrade `!rsaadd tastytrade username:password`
                 # Get holdings or complete transaction
                 if discOrdObj.get_holdings():
                     # Run Holdings
-                    await bot.loop.run_in_executor(
-                        None,
-                        fun_run,
+                    await fun_run(
                         author_id,
                         discOrdObj,
                         ("_init", "_holdings"),
                         bot,
                         event_loop,
                     )
+
                 else:
                     # Run Transaction
-                    await bot.loop.run_in_executor(
-                        None,
-                        fun_run,
+                    await fun_run(
                         author_id,
                         discOrdObj,
                         ("_init", "_transaction"),
                         bot,
                         event_loop,
                     )
+
             except Exception as err:
                 print(traceback.format_exc())
                 print(f"Error placing order: {err}")
@@ -587,7 +588,7 @@ For Tastytrade `!rsaadd tastytrade username:password`
                     credentials.encode()
                 ).decode()
 
-                cursor.execute(
+                async with bot.db.execute(
                     """
                     INSERT INTO rsa_credentials (user_id, broker, credentials)
                     VALUES (?, ?, ?) ON CONFLICT (user_id, broker) DO UPDATE SET credentials = ? 
@@ -598,9 +599,9 @@ For Tastytrade `!rsaadd tastytrade username:password`
                         encrypted_credentials,
                         encrypted_credentials,
                     ),
-                )
+                ) as cursor:
+                    await bot.db.commit()
 
-                conn.commit()
                 await ctx.send(f"Successfully added {broker} account")
 
             except Exception as e:
@@ -609,26 +610,27 @@ For Tastytrade `!rsaadd tastytrade username:password`
 
         @bot.command(name="removersa")
         @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
-        async def removersa(ctx, broker, username):
+        async def removersa(ctx, broker):
             try:
                 broker = broker.lower()
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
-                cursor.execute(
+                async with bot.db.execute(
                     """
-                    DELETE FROM rsa_credentials WHERE user_id = ? AND broker = ? AND username = ?
+                    DELETE FROM rsa_credentials WHERE user_id = ? AND broker = ?
                 """,
-                    (str(ctx.author.id), broker, username),
-                )
-
-                if cursor.rowcount > 0:
-                    conn.commit()
-                    await ctx.send(
-                        f"Successfully removed {username}'s account from {broker}."
-                    )
-                else:
-                    await ctx.send(f"No account found for {username} with {broker}.")
+                    (str(ctx.author.id), broker),
+                ) as cursor:
+                    if cursor.rowcount > 0:
+                        await bot.db.commit()
+                        await ctx.send(
+                            f"Successfully removed <@{ctx.author.id}>'s account from {broker}."
+                        )
+                    else:
+                        await ctx.send(
+                            f"No account found for <@{ctx.author.id}> with {broker}."
+                        )
 
             except commands.MissingRole:
                 await ctx.send("You do not have the required role to run this command.")
@@ -641,13 +643,13 @@ For Tastytrade `!rsaadd tastytrade username:password`
         async def accountrsa(ctx):
             try:
                 accounts = []
-                cursor.execute(
+                async with bot.db.execute(
                     """
-                    SELECT broker, username FROM rsa_credentials WHERE user_id = ?
+                    SELECT broker FROM rsa_credentials WHERE user_id = ?
                 """,
                     (str(ctx.author.id),),
-                )
-                accounts = cursor.fetchall()
+                ) as cursor:
+                    accounts = await cursor.fetchall()
 
                 # # Check all supported brokers
                 # for broker in SUPPORTED_BROKERS:
@@ -689,10 +691,14 @@ For Tastytrade `!rsaadd tastytrade username:password`
                 print(f"Command Error: {error}")
                 await ctx.send(f"Command Error: {error}")
                 # Print help command
-                # print("Type '!help' for a list of commands")
                 await ctx.send("Type '!helprsa' for a list of commands")
 
         # Run Discord bot
-        bot.run(DISCORD_TOKEN)
-        print("Discord bot is running...")
-        print()
+        async with bot:
+            await bot.start(DISCORD_TOKEN)
+            print("Discord bot is running...")
+            # print()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
