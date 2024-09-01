@@ -70,7 +70,7 @@ def tastytrade_init(API_METADATA=None):
     for account in accounts:
         index = accounts.index(account) + 1
         account = account.strip().split(":")
-        name = f"Tastytrade {CURRENT_USER_ID} {index}"
+        name = f"{CURRENT_USER_ID}-Tastytrade {index}"
         try:
             tasty = Session(account[0], account[1])
             tasty_obj.set_logged_in_object(name, tasty, "session")

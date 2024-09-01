@@ -69,7 +69,7 @@ def vanguard_init(
     # Log in to Vanguard account
     print("Logging in to Vanguard...")
     vanguard_obj = Brokerage("VANGUARD")
-    name = f"Vanguard {index}"
+    name = f"{CURRENT_USER_ID}-Vanguard {index}"
     try:
         account = account.split(":")
         debug = bool(account[3]) if len(account) == 4 else False

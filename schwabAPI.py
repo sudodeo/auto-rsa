@@ -33,7 +33,7 @@ def schwab_init(API_METADATA=None):
     schwab_obj = Brokerage("Schwab")
     for account in accounts:
         index = accounts.index(account) + 1
-        name = f"Schwab {index}"
+        name = f"{CURRENT_USER_ID}-Schwab {index}"
         try:
             account = account.split(":")
             schwab = Schwab(session_cache=f"./creds/schwab_{CURRENT_USER_ID}_{index}.json")

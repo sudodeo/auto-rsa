@@ -72,7 +72,7 @@ def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None):
     # Init webdriver
     for account in accounts:
         index = accounts.index(account) + 1
-        name = f"Fidelity {index}"
+        name = f"{CURRENT_USER_ID}-Fidelity {index}"
         account = account.split(":")
         try:
             print("Logging in to Fidelity...")

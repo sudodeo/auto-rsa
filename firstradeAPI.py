@@ -42,7 +42,7 @@ def firstrade_init(API_METADATA=None, botObj=None, loop=None):
     firstrade_obj = Brokerage("Firstrade")
     for account in accounts:
         index = accounts.index(account) + 1
-        name = f"Firstrade {index}"
+        name = f"{CURRENT_USER_ID}-Firstrade {index}"
         try:
             account = account.split(":")
             firstrade = ft_account.FTSession(

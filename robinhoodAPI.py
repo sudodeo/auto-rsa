@@ -41,7 +41,7 @@ def robinhood_init(API_METADATA=None):
     all_account_numbers = []
     for account in RH:
         index = RH.index(account) + 1
-        name = f"Robinhood {CURRENT_USER_ID} {index}"
+        name = f"{CURRENT_USER_ID}-Robinhood {index}"
         print(f"Logging in to {name}...")
         try:
             account = account.split(":")

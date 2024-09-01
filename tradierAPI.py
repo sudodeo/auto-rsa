@@ -75,7 +75,7 @@ def tradier_init(API_METADATA=None):
     tradier_obj = Brokerage("Tradier")
     print("Logging in to Tradier...")
     for account in accounts:
-        name = f"Tradier {CURRENT_USER_ID} {accounts.index(account) + 1}"
+        name = f"{CURRENT_USER_ID}-Tradier {accounts.index(account) + 1}"
         json_response = make_request("user/profile", account)
         if json_response is None:
             continue

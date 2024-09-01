@@ -102,7 +102,7 @@ def chase_init(
     print(f"Logging in to Chase for user {CURRENT_USER_ID}...")
     # Create brokerage class object and call it chase
     chase_obj = Brokerage("Chase")
-    name = f"Chase {index}"
+    name = f"{CURRENT_USER_ID}-Chase {index}"
     # Split the login into into seperate items
     account = account.split(":")
     # If the debug flag is present, use it, else set it to false
@@ -129,7 +129,7 @@ def chase_init(
                     loop,
                 ).result()
                 if sms_code is None:
-                    raise Exception(f"Chase {index} code not received in time...", loop)
+                    raise Exception(f"{CURRENT_USER_ID}-Chase {index} code not received in time...", loop)
                 ch_session.login_two(sms_code)
         # Create an AllAccounts class object using the current browser session. Holds information about all accounts
         all_accounts = ch_account.AllAccount(ch_session)
