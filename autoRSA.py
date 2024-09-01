@@ -167,7 +167,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                 fun_name = broker + init_command
                 if broker.lower() == "fidelity":
                     # Fidelity requires docker mode argument, botObj, and loop
-                    result = globals()[fun_name](
+                    result = await globals()[fun_name](
                         API_METADATA=API_METADATA,
                         DOCKER=DOCKER_MODE,
                         botObj=botObj,
