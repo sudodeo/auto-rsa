@@ -15,7 +15,7 @@ from helperAPI import (
 )
 
 
-def public_init(API_METADATA=None, botObj=None, loop=None):
+async def public_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -39,7 +39,10 @@ def public_init(API_METADATA=None, botObj=None, loop=None):
         name = f"{CURRENT_USER_ID}-Public {index + 1}"
         try:
             account = account.split(":")
-            pb = Public(filename=f"public_{CURRENT_USER_ID}_{index + 1}.pkl", path=f"./creds/{CURRENT_USER_ID}/")
+            pb = Public(
+                filename=f"public_{CURRENT_USER_ID}_{index + 1}.pkl",
+                path=f"./creds/{CURRENT_USER_ID}/",
+            )
             try:
                 if botObj is None and loop is None:
                     # Login from CLI
@@ -59,12 +62,9 @@ def public_init(API_METADATA=None, botObj=None, loop=None):
                 if "2FA" in str(e) and botObj is not None and loop is not None:
                     # Sometimes codes take a long time to arrive
                     timeout = 300  # 5 minutes
-                    sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(
-                            botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
-                        ),
-                        loop,
-                    ).result()
+                    sms_code = await getOTPCodeDiscord(
+                        botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
+                    )
                     if sms_code is None:
                         raise Exception("No SMS code found")
                     pb.login(

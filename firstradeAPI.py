@@ -21,7 +21,7 @@ from helperAPI import (
 )
 
 
-def firstrade_init(API_METADATA=None, botObj=None, loop=None):
+async def firstrade_init(API_METADATA=None, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -71,12 +71,9 @@ def firstrade_init(API_METADATA=None, botObj=None, loop=None):
                 if botObj is None and loop is None:
                     firstrade.login_two(input("Enter code: "))
                 else:
-                    sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(
-                            botObj, CURRENT_USER_ID, name, timeout=300, loop=loop
-                        ),
-                        loop,
-                    ).result()
+                    sms_code = await getOTPCodeDiscord(
+                        botObj, CURRENT_USER_ID, name, timeout=300, loop=loop
+                    )
                     if sms_code is None:
                         raise Exception(
                             f"Firstrade {index} code not received in time...", loop

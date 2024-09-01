@@ -51,7 +51,7 @@ def javascript_get_classname(driver: webdriver, className) -> list:
     return text
 
 
-def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None):
+async def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None):
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -165,12 +165,9 @@ def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None):
                 # Sometimes codes take a long time to arrive
                 timeout = 300  # 5 minutes
                 if botObj is not None and loop is not None:
-                    sms_code = asyncio.run_coroutine_threadsafe(
-                        getOTPCodeDiscord(
+                    sms_code = await getOTPCodeDiscord(
                             botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
-                        ),
-                        loop,
-                    ).result()
+                        )
                     if sms_code is None:
                         raise Exception("No SMS code found")
                 else:
