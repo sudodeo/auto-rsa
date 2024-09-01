@@ -50,7 +50,7 @@ def webull_init(API_METADATA=None):
     )
     for index, account in enumerate(accounts):
         print("Logging in to Webull...")
-        name = f"Webull {index + 1}"
+        name = f"{CURRENT_USER_ID}-Webull {index + 1}"
         account = account.split(":")
         if len(account) != 4:
             print(

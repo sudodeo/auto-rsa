@@ -36,7 +36,7 @@ def public_init(API_METADATA=None, botObj=None, loop=None):
     # Log in to Public account
     print(f"Logging in to Public for user {CURRENT_USER_ID}...")
     for index, account in enumerate(PUBLIC):
-        name = f"Public {index + 1}"
+        name = f"{CURRENT_USER_ID}-Public {index + 1}"
         try:
             account = account.split(":")
             pb = Public(filename=f"public_{CURRENT_USER_ID}_{index + 1}.pkl", path=f"./creds/{CURRENT_USER_ID}/")
