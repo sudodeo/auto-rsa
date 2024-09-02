@@ -131,6 +131,10 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             printAndDiscord(f"<@{author_id}> No brokers to run", loop)
             return
         for broker in order_brokers:
+            # robin hood is currently unavailable
+            if broker == "robinhood":
+                printAndDiscord(f"Robinhood is currently unavailable", loop)
+                continue
             if broker in orderObj.get_notbrokers():
                 continue
 
@@ -246,28 +250,29 @@ def argParser(args: list) -> stockOrder:
     # Initialize order object
     orderObj = stockOrder()
     # If first argument is holdings, set holdings to true
-    if args[0] == "holdings":
-        orderObj.set_holdings(True)
-        # Next argument is brokers
-        if args[1] == "all":
-            orderObj.set_brokers(SUPPORTED_BROKERS)
-        elif args[1] == "day1":
-            orderObj.set_brokers(DAY1_BROKERS)
-        elif args[1] == "most":
-            orderObj.set_brokers(
-                list(filter(lambda x: x != "vanguard", SUPPORTED_BROKERS))
-            )
-        elif args[1] == "fast":
-            orderObj.set_brokers(DAY1_BROKERS + ["robinhood"])
-        else:
-            for broker in args[1].split(","):
-                orderObj.set_brokers(nicknames(broker))
-        # If next argument is not, set not broker
-        if len(args) > 3 and args[2] == "not":
-            for broker in args[3].split(","):
-                if nicknames(broker) in SUPPORTED_BROKERS:
-                    orderObj.set_notbrokers(nicknames(broker))
-        return orderObj
+    # ! disabling holdings
+    # if args[0] == "holdings":
+    #     orderObj.set_holdings(True)
+    #     # Next argument is brokers
+    #     if args[1] == "all":
+    #         orderObj.set_brokers(SUPPORTED_BROKERS)
+    #     elif args[1] == "day1":
+    #         orderObj.set_brokers(DAY1_BROKERS)
+    #     elif args[1] == "most":
+    #         orderObj.set_brokers(
+    #             list(filter(lambda x: x != "vanguard", SUPPORTED_BROKERS))
+    #         )
+    #     elif args[1] == "fast":
+    #         orderObj.set_brokers(DAY1_BROKERS + ["robinhood"])
+    #     else:
+    #         for broker in args[1].split(","):
+    #             orderObj.set_brokers(nicknames(broker))
+    #     # If next argument is not, set not broker
+    #     if len(args) > 3 and args[2] == "not":
+    #         for broker in args[3].split(","):
+    #             if nicknames(broker) in SUPPORTED_BROKERS:
+    #                 orderObj.set_notbrokers(nicknames(broker))
+    #     return orderObj
     # Otherwise: action, amount, stock, broker, (optional) not broker, (optional) dry
     orderObj.set_action(args[0])
     orderObj.set_amount(args[1])
