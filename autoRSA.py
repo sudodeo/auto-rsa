@@ -437,20 +437,20 @@ async def main():
             # String of available commands
             await ctx.send(
                 """
-                :emoney:  eMoney RSA Bot:
+eMoney RSA Bot:
 
-Buying Stocks:
+**Buying Stocks:**
 - `!rsa buy 1 <STOCK> <BROKERAGE> false (Example: !rsa buy 1 ABCD Fidelity False)`
 - `!rsa buy 1 ABCD,OBLG,TOXV all false (Buys ABCD, OBLG, and TOXV on ALL accounts)`
 
-Selling Stocks:
+**Selling Stocks:**
 - `!rsa sell 1 <STOCK> <BROKERAGE> false (Example: !rsa sell 1 ABCD Fidelity False)`
 - `!rsa sell 1 ABCD,OBLG,TOXV all false (Sells ABCD, OBLG, and TOXV on ALL accounts)`
 
-View Holdings:
+**View Holdings:**
 - `!rsa holdings <brokerage> (Will view all stocks owned on that brokerage. Or type "all" to view ALL brokerages)`
 
-Adding Your Accounts:
+**Adding Your Accounts:**
 For Fennel just enter email `!rsaadd fennel email`
 For Fidelity `!rsaadd fidelity username:password`
 For Public `!rsaadd public username:password`
@@ -608,7 +608,7 @@ For Tastytrade `!rsaadd tastytrade username:password`
                         )
 
             except commands.MissingRole:
-                await ctx.send("You do not have the required role to run this command.")
+                await ctx.send("To get access to the RSA bot, follow the instructions here: <#1280212428415570053>")
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error retrieving accounts: {e}")
@@ -654,7 +654,7 @@ For Tastytrade `!rsaadd tastytrade username:password`
                     await ctx.send("You haven't set up any accounts yet.")
 
             except commands.MissingRole:
-                await ctx.send("You do not have the required role to run this command.")
+                await ctx.send("To get access to the RSA bot, follow the instructions here: <#1280212428415570053>")
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error retrieving accounts: {e}")
