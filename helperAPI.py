@@ -638,7 +638,7 @@ async def getOTPCodeDiscord(
     loop=None,
 ):
     # Fetch the user object using their ID
-    user = botObj.get_user(expected_user_id)
+    user = await botObj.fetch_user(expected_user_id)
     if user is None:
         printAndDiscord(f"Could not find user with ID {expected_user_id}", loop)
         return None
