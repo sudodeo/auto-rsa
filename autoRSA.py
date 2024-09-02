@@ -438,25 +438,7 @@ async def main():
             await ctx.send(
                 """
 eMoney RSA Bot:
-
-**Buying Stocks:**
-- `!rsa buy 1 <STOCK> <BROKERAGE> false (Example: !rsa buy 1 ABCD Fidelity False)`
-- `!rsa buy 1 ABCD,OBLG,TOXV all false (Buys ABCD, OBLG, and TOXV on ALL accounts)`
-
-**Selling Stocks:**
-- `!rsa sell 1 <STOCK> <BROKERAGE> false (Example: !rsa sell 1 ABCD Fidelity False)`
-- `!rsa sell 1 ABCD,OBLG,TOXV all false (Sells ABCD, OBLG, and TOXV on ALL accounts)`
-
-**View Holdings:**
-- `!rsa holdings <brokerage> (Will view all stocks owned on that brokerage. Or type "all" to view ALL brokerages)`
-
-**Adding Your Accounts:**
-For Fennel just enter email `!rsaadd fennel email`
-For Fidelity `!rsaadd fidelity username:password`
-For Public `!rsaadd public username:password`
-For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`         without 2fa: `!rsaadd robinhood username:password:NA`
-For Tradier `!rsaadd tradier tradier_access_token`
-For Tastytrade `!rsaadd tastytrade username:password`
+Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247320165>
                 """
             )
 
