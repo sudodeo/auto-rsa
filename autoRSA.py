@@ -436,25 +436,6 @@ async def main():
         async def helprsa(ctx):
             # String of available commands
             await ctx.send(
-                # "Here's a list of commands on how to setup your RSA Bot.:\n\n"
-                # # "Available RSA commands:\n"
-                # "!ping\n"
-                # "!help\n"
-                # "!rsaadd (brokerage) (username/email) (password)\n"
-                # "!rsa holdings [all|<broker1>,<broker2>,...] [not broker1,broker2,...]\n"
-                # "!rsa [buy|sell] [amount] [stock1|stock1,stock2] [all|<broker1>,<broker2>,...] [not broker1,broker2,...] [DRY: true|false]\n"
-                # # "!restart"
-                # "For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`"
-                # "For Fennel just enter email `!rsaadd fennel email`\n"
-                # "For Fidelity `!rsaadd fidelity username:password`\n"
-                # "For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`\n"
-                # "For Public `!rsaadd public username:password`\n"
-                # "For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`\t\t without 2fa: `!rsaadd robinhood username:password:NA"
-                # "For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`\t\t without 2fa: `!rsaadd schwab username:password:NA"
-                # "For Tradier `!rsaadd tradier tradier_access_token`\n"
-                # "For Tastytrade `!rsaadd tastytrade username:password`\n"
-                # "For Vanguard: Also include the last 4 of your phone number after the password so `!rsaadd vanguard username:password:7890`\n"
-                # "For Webull `!rsaadd webull username:password:device_id:trading_pin`\n"
                 """
                 :emoney:  eMoney RSA Bot:
 
@@ -470,13 +451,10 @@ View Holdings:
 - `!rsa holdings <brokerage> (Will view all stocks owned on that brokerage. Or type "all" to view ALL brokerages)`
 
 Adding Your Accounts:
-For Chase: Also include the last 4 of your phone number after the password so `!rsaadd chase username:password:1234:true|false(debug mode)`
 For Fennel just enter email `!rsaadd fennel email`
 For Fidelity `!rsaadd fidelity username:password`
-For Firstrade: Add otp `!rsaadd firstrade username:password:firstrade_otp`
 For Public `!rsaadd public username:password`
 For Robinhood: if 2fa is enabled: `!rsaadd robinhood email:password:robinhood_totp`         without 2fa: `!rsaadd robinhood username:password:NA`
-For Schwab: if 2fa is enabled: `!rsaadd schwab email:password:schwab_totp_secret`         without 2fa: `!rsaadd schwab username:password:NA`
 For Tradier `!rsaadd tradier tradier_access_token`
 For Tastytrade `!rsaadd tastytrade username:password`
                 """
@@ -545,17 +523,17 @@ For Tastytrade `!rsaadd tastytrade username:password`
                     raise Exception(f"{broker} is not a supported broker")
 
                 # Handle different broker-specific credential formats
-                if broker == "chase":
-                    if len(credentials.split(":")) != 4:
-                        raise Exception(
-                            "Invalid credentials. Use this format: username:password:last4PhoneDigits:trueOrfalse"
-                        )
+                # if broker == "chase":
+                #     if len(credentials.split(":")) != 4:
+                #         raise Exception(
+                #             "Invalid credentials. Use this format: username:password:last4PhoneDigits:trueOrfalse"
+                #         )
                 elif broker == "fennel":
                     if "@" not in credentials or len(credentials.split(":")) != 1:
                         raise Exception(
                             "Invalid credentials. Just enter your email for Fennel."
                         )
-                elif broker in ["firstrade", "robinhood", "schwab"]:
+                elif broker in ["robinhood"]:#,"firstrade", "schwab"]:
                     if len(credentials.split(":")) != 3:
                         raise Exception(
                             f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret|NA"
