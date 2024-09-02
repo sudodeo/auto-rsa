@@ -637,10 +637,22 @@ async def getOTPCodeDiscord(
     timeout=60,
     loop=None,
 ):
-    printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
-    printAndDiscord(
-        f"<@{expected_user_id}> Please enter OTP code or type cancel within {timeout} seconds", loop
+    # Fetch the user object using their ID
+    user = botObj.get_user(expected_user_id)
+    if user is None:
+        printAndDiscord(f"Could not find user with ID {expected_user_id}", loop)
+        return None
+
+    # Send the OTP request message to the user's DMs
+    await user.send(f"{brokerName} requires an OTP code.")
+    await user.send(
+        f"Please enter the OTP code or type 'cancel' within {timeout} seconds."
     )
+
+    # printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
+    # printAndDiscord(
+    #     f"<@{expected_user_id}> Please enter OTP code or type cancel within {timeout} seconds", loop
+    # )
 
     # Get OTP code from Discord
     while True:
@@ -648,34 +660,27 @@ async def getOTPCodeDiscord(
             code = await botObj.wait_for(
                 "message",
                 check=lambda m: m.author.id == expected_user_id
-                and m.channel.id == int(os.getenv("DISCORD_CHANNEL")),
+                and isinstance(m.channel, discord.DMChannel),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
-            printAndDiscord(
-                f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>",
-                loop,
-            )
+            # printAndDiscord(
+            #     f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>",
+            #     loop,
+            # )
+            await user.send(f"Timed out waiting for OTP code input for {brokerName}.")
             return None
 
         if code.content.lower() == "cancel":
-            printAndDiscord(
-                f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop
-            )
+            # printAndDiscord(
+            #     f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop
+            # )
+            await user.send(f"Cancelling OTP code for {brokerName}.")
             return None
 
-        try:
-            int(code.content)  # Check if code is numbers only
-        except ValueError:
-            printAndDiscord(
-                "OTP code must be numbers only <@{expected_user_id}>", loop
-            )
-            continue
-
-        if len(code.content) != code_len:
-            printAndDiscord(
-                f"OTP code must be {code_len} digits <@{expected_user_id}>", loop
-            )
+        # Ensure the OTP is numeric and of the correct length
+        if not code.content.isdigit() or len(code.content) != code_len:
+            await user.send(f"OTP code must be {code_len} digits.")
             continue
 
         return code.content
