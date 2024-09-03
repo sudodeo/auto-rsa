@@ -346,6 +346,7 @@ def is_up_to_date(remote, branch):
 
     # Check if local branch is up to date with ls-remote
     up_to_date = False
+    is_fork = False
     remote_hash = ""
     local_commit = git.Repo(".").head.commit.hexsha
     try:
