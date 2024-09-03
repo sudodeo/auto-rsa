@@ -404,6 +404,15 @@ async def main():
             """
             )
             await bot.db.commit()
+        
+        async def ensure_db_connection():
+            if not hasattr(bot, 'db') or bot.db is None:
+                await init_db()
+            else:
+                try:
+                    await bot.db.execute("SELECT 1")
+                except ValueError:
+                    await init_db()
 
         # Bot event when bot is ready
         @bot.event
@@ -500,6 +509,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
         # rsaadd command
         @bot.command(name="rsaadd")
         async def rsaadd(ctx, broker, credentials):
+            await ensure_db_connection()
             try:
                 if not isinstance(ctx.channel, discord.DMChannel):
                     await ctx.send("This command can only be used via DM.")
@@ -573,6 +583,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
         @bot.command(name="removersa")
         @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
         async def removersa(ctx, broker):
+            await ensure_db_connection()
             try:
                 broker = broker.lower()
                 if broker not in SUPPORTED_BROKERS:
@@ -603,6 +614,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
         @bot.command(name="accountrsa")
         @commands.has_role(RSA_ADMIN_ROLE_ID)
         async def accountrsa(ctx):
+            await ensure_db_connection()
             try:
                 accounts = []
                 async with bot.db.execute(
