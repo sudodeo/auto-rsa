@@ -460,6 +460,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
         @bot.command(name="rsa")
         @commands.has_role(RSA_BOT_ROLE_ID)
         async def rsa(ctx, *args):
+            await ensure_db_connection()
             discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
             event_loop = asyncio.get_event_loop()
             try:
