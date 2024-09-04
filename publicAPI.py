@@ -92,7 +92,13 @@ async def public_init(API_METADATA=None, botObj=None, loop=None):
     return public_obj
 
 
-def public_holdings(pbo: Brokerage, loop=None):
+def public_holdings(
+    pbo: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in pbo.get_account_numbers():
         for account in pbo.get_account_numbers(key):
             obj: Public = pbo.get_logged_in_objects(key)
@@ -112,7 +118,14 @@ def public_holdings(pbo: Brokerage, loop=None):
                 printAndDiscord(f"{key}: Error getting account holdings: {e}", loop)
                 traceback.format_exc()
                 continue
-    printHoldings(pbo, loop)
+    # printHoldings(pbo, loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        pbo,
+        loop,
+        False,
+    )
 
 
 def public_transaction(pbo: Brokerage, orderObj: stockOrder, loop=None):

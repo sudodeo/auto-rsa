@@ -83,7 +83,13 @@ def robinhood_init(API_METADATA=None):
     return rh_obj
 
 
-def robinhood_holdings(rho: Brokerage, loop=None):
+def robinhood_holdings(
+    rho: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in rho.get_account_numbers():
         for account in rho.get_account_numbers(key):
             obj: rh = rho.get_logged_in_objects(key)
@@ -108,7 +114,14 @@ def robinhood_holdings(rho: Brokerage, loop=None):
                 printAndDiscord(f"{key}: Error getting account holdings: {e}", loop)
                 traceback.format_exc()
                 continue
-    printHoldings(rho, loop)
+    # printHoldings(rho, loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        rho,
+        loop,
+        False,
+    )
 
 
 def robinhood_transaction(rho: Brokerage, orderObj: stockOrder, loop=None):

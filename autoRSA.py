@@ -222,7 +222,13 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                     # Get holdings or complete transaction
                     if second_command == "_holdings":
                         fun_name = broker + second_command
-                        globals()[fun_name](logged_in_broker, loop)
+                        globals()[fun_name](
+                            logged_in_broker,
+                            loop,
+                            botObj=botObj,
+                            loop=loop,
+                            API_METADATA=API_METADATA,
+                        )
                     elif second_command == "_transaction":
                         fun_name = broker + second_command
                         globals()[fun_name](
@@ -250,30 +256,32 @@ def argParser(args: list) -> stockOrder:
     # Initialize order object
     orderObj = stockOrder()
     # If first argument is holdings, set holdings to true
-    # ! disabling holdings
-    # if args[0] == "holdings":
-    #     orderObj.set_holdings(True)
-    #     # Next argument is brokers
-    #     if args[1] == "all":
-    #         orderObj.set_brokers(SUPPORTED_BROKERS)
-    #     elif args[1] == "day1":
-    #         orderObj.set_brokers(DAY1_BROKERS)
-    #     elif args[1] == "most":
-    #         orderObj.set_brokers(
-    #             list(filter(lambda x: x != "vanguard", SUPPORTED_BROKERS))
-    #         )
-    #     elif args[1] == "fast":
-    #         orderObj.set_brokers(DAY1_BROKERS + ["robinhood"])
-    #     else:
-    #         for broker in args[1].split(","):
-    #             orderObj.set_brokers(nicknames(broker))
-    #     # If next argument is not, set not broker
-    #     if len(args) > 3 and args[2] == "not":
-    #         for broker in args[3].split(","):
-    #             if nicknames(broker) in SUPPORTED_BROKERS:
-    #                 orderObj.set_notbrokers(nicknames(broker))
-    #     return orderObj
+
+    if args[0] == "holdings":
+        orderObj.set_holdings(True)
+        # Next argument is brokers
+        if args[1] == "all":
+            orderObj.set_brokers(SUPPORTED_BROKERS)
+        elif args[1] == "day1":
+            orderObj.set_brokers(DAY1_BROKERS)
+        elif args[1] == "most":
+            orderObj.set_brokers(
+                list(filter(lambda x: x != "vanguard", SUPPORTED_BROKERS))
+            )
+        elif args[1] == "fast":
+            orderObj.set_brokers(DAY1_BROKERS + ["robinhood"])
+        else:
+            for broker in args[1].split(","):
+                orderObj.set_brokers(nicknames(broker))
+        # If next argument is not, set not broker
+        if len(args) > 3 and args[2] == "not":
+            for broker in args[3].split(","):
+                if nicknames(broker) in SUPPORTED_BROKERS:
+                    orderObj.set_notbrokers(nicknames(broker))
+        return orderObj
     # Otherwise: action, amount, stock, broker, (optional) not broker, (optional) dry
+    if args[0] not in ["buy", "sell"]:
+        raise Exception(f"Unsupported action: {args[0]}")
     orderObj.set_action(args[0])
     orderObj.set_amount(args[1])
     for stock in args[2].split(","):
@@ -404,9 +412,9 @@ async def main():
             """
             )
             await bot.db.commit()
-        
+
         async def ensure_db_connection():
-            if not hasattr(bot, 'db') or bot.db is None:
+            if not hasattr(bot, "db") or bot.db is None:
                 await init_db()
             else:
                 try:
@@ -531,7 +539,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                         raise Exception(
                             "Invalid credentials. Just enter your email for Fennel."
                         )
-                elif broker in ["robinhood"]:#,"firstrade", "schwab"]:
+                elif broker in ["robinhood"]:  # ,"firstrade", "schwab"]:
                     if len(credentials.split(":")) != 3:
                         raise Exception(
                             f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret|NA"
@@ -607,7 +615,9 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                         )
 
             except commands.MissingRole:
-                await ctx.send("To get access to the RSA bot, follow the instructions here: <#1280212428415570053>")
+                await ctx.send(
+                    "To get access to the RSA bot, follow the instructions here: <#1280212428415570053>"
+                )
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error retrieving accounts: {e}")
@@ -654,7 +664,9 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                     await ctx.send("You haven't set up any accounts yet.")
 
             except commands.MissingRole:
-                await ctx.send("To get access to the RSA bot, follow the instructions here: <#1280212428415570053>")
+                await ctx.send(
+                    "To get access to the RSA bot, follow the instructions here: <#1280212428415570053>"
+                )
             except Exception as e:
                 print(traceback.format_exc())
                 await ctx.send(f"Error retrieving accounts: {e}")

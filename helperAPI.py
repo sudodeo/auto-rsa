@@ -696,7 +696,19 @@ def maskString(string):
     return masked
 
 
-def printHoldings(brokerObj: Brokerage, loop=None, mask=True):
+async def printHoldings(
+    botObj: commands.Bot,
+    expected_user_id: int,
+    brokerObj: Brokerage,
+    loop=None,
+    mask=True,
+):
+    # Fetch the user object using their ID
+    user = await botObj.fetch_user(expected_user_id)
+    if user is None:
+        printAndDiscord(f"Could not find user with ID {expected_user_id}", loop)
+        return None
+
     # Helper function for holdings formatting
     EMBED = {
         "title": f"{brokerObj.get_name()} Holdings",
@@ -733,5 +745,5 @@ def printHoldings(brokerObj: Brokerage, loop=None, mask=True):
                 else print_string
             )
             EMBED["fields"].append(field)
-    printAndDiscord(EMBED, loop, True)
+    await user.send(embed=EMBED)
     print("==============================")

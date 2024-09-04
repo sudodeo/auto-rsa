@@ -152,7 +152,13 @@ def tornado_extract_holdings(driver):
     return holdings_data
 
 
-def tornado_holdings(Tornado_o: Brokerage, loop=None):
+def tornado_holdings(
+    Tornado_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     try:
         # Ensure we are using the correct account name
         account_names = Tornado_o.get_account_numbers()
@@ -198,7 +204,14 @@ def tornado_holdings(Tornado_o: Brokerage, loop=None):
         tornado_error(driver, loop)
         printAndDiscord(f"Tornado Account: Error processing holdings: {e}", loop)
 
-    printHoldings(Tornado_o, loop)  # Send the holdings to Discord
+    # printHoldings(Tornado_o, loop)  # Send the holdings to Discord
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        Tornado_o,
+        loop,
+        False,
+    )
     killSeleniumDriver(Tornado_o)  # Close the browser after processing
 
 

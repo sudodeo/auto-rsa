@@ -89,7 +89,13 @@ def tastytrade_init(API_METADATA=None):
     return tasty_obj
 
 
-def tastytrade_holdings(tt_o: Brokerage, loop=None):
+def tastytrade_holdings(
+    tt_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in tt_o.get_account_numbers():
         obj: Session = tt_o.get_logged_in_objects(key, "session")
         for index, account in enumerate(tt_o.get_logged_in_objects(key, "accounts")):
@@ -108,7 +114,14 @@ def tastytrade_holdings(tt_o: Brokerage, loop=None):
                 printAndDiscord(f"{key}: Error getting account holdings: {e}", loop)
                 print(traceback.format_exc())
                 continue
-    printHoldings(tt_o, loop=loop)
+    # printHoldings(tt_o, loop=loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        tt_o,
+        loop,
+        False,
+    )
 
 
 async def tastytrade_execute(tt_o: Brokerage, orderObj: stockOrder, loop=None):

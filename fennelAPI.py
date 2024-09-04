@@ -96,7 +96,13 @@ async def fennel_init(API_METADATA=None, botObj=None, loop=None):
     return fennel_obj
 
 
-def fennel_holdings(fbo: Brokerage, loop=None):
+def fennel_holdings(
+    fbo: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in fbo.get_account_numbers():
         for account in fbo.get_account_numbers(key):
             obj: Fennel = fbo.get_logged_in_objects(key, "fb")
@@ -118,7 +124,13 @@ def fennel_holdings(fbo: Brokerage, loop=None):
                 printAndDiscord(f"Error getting Fennel holdings: {e}")
                 print(traceback.format_exc())
                 continue
-    printHoldings(fbo, loop, False)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        fbo,
+        loop,
+        False,
+    )
 
 
 def fennel_transaction(fbo: Brokerage, orderObj: stockOrder, loop=None):

@@ -117,7 +117,13 @@ def vanguard_init(
     return vanguard_obj
 
 
-def vanguard_holdings(vanguard_o: Brokerage, loop=None):
+def vanguard_holdings(
+    vanguard_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Get holdings on each account
     for key in vanguard_o.get_account_numbers():
         try:
@@ -147,7 +153,14 @@ def vanguard_holdings(vanguard_o: Brokerage, loop=None):
             printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
             print(traceback.format_exc())
             continue
-        printHoldings(vanguard_o, loop)
+        # printHoldings(vanguard_o, loop)
+        printHoldings(
+            botObj,
+            CURRENT_USER_ID,
+            vanguard_o,
+            loop,
+            False,
+        )
     obj.close_browser()
 
 

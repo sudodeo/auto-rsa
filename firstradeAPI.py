@@ -96,7 +96,13 @@ async def firstrade_init(API_METADATA=None, botObj=None, loop=None):
     return firstrade_obj
 
 
-def firstrade_holdings(firstrade_o: Brokerage, loop=None):
+def firstrade_holdings(
+    firstrade_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Get holdings on each account
     for key in firstrade_o.get_account_numbers():
         for account in firstrade_o.get_account_numbers(key):
@@ -115,7 +121,14 @@ def firstrade_holdings(firstrade_o: Brokerage, loop=None):
                 printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
                 print(traceback.format_exc())
                 continue
-    printHoldings(firstrade_o, loop)
+    # printHoldings(firstrade_o, loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        firstrade_o,
+        loop,
+        False,
+    )
 
 
 def firstrade_transaction(firstrade_o: Brokerage, orderObj: stockOrder, loop=None):

@@ -109,7 +109,13 @@ def tradier_init(API_METADATA=None):
     return tradier_obj
 
 
-def tradier_holdings(tradier_o: Brokerage, loop=None):
+def tradier_holdings(
+    tradier_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Loop through accounts
     for key in tradier_o.get_account_numbers():
         for account_number in tradier_o.get_account_numbers(key):
@@ -162,7 +168,14 @@ def tradier_holdings(tradier_o: Brokerage, loop=None):
                 printAndDiscord(f"{key}: Error getting holdings: {e}", loop=loop)
                 print(traceback.format_exc())
                 continue
-    printHoldings(tradier_o, loop=loop)
+    # printHoldings(tradier_o, loop=loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        tradier_o,
+        loop,
+        False,
+    )
 
 
 def tradier_transaction(tradier_o: Brokerage, orderObj: stockOrder, loop=None):

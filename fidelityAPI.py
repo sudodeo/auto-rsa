@@ -280,7 +280,8 @@ def fidelity_account_info(driver: webdriver) -> dict | None:
         return None
 
 
-def fidelity_holdings(fidelity_o: Brokerage, loop=None):
+def fidelity_holdings(fidelity_o: Brokerage, loop=None,API_METADATA=None, botObj=None,):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in fidelity_o.get_account_numbers():
         driver: webdriver = fidelity_o.get_logged_in_objects(key)
         for account in fidelity_o.get_account_numbers(key):
@@ -315,7 +316,13 @@ def fidelity_holdings(fidelity_o: Brokerage, loop=None):
             except Exception as e:
                 fidelity_error(driver, e)
                 continue
-    printHoldings(fidelity_o, loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        fidelity_o,
+        loop,
+        False,
+    )
     killSeleniumDriver(fidelity_o)
 
 

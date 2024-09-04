@@ -96,7 +96,13 @@ def webull_init(API_METADATA=None):
     return wb_obj
 
 
-def webull_holdings(wbo: Brokerage, loop=None):
+def webull_holdings(
+    wbo: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in wbo.get_account_numbers():
         for account in wbo.get_account_numbers(key):
             obj: webull = wbo.get_logged_in_objects(key, "wb")
@@ -127,7 +133,14 @@ def webull_holdings(wbo: Brokerage, loop=None):
                 printAndDiscord(f"{key}: Error getting holdings: {e}", loop)
                 traceback.print_exc()
                 continue
-    printHoldings(wbo, loop=loop)
+    # printHoldings(wbo, loop=loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        wbo,
+        loop,
+        False,
+    )
 
 
 def webull_transaction(wbo: Brokerage, orderObj: stockOrder, loop=None):

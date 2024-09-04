@@ -36,7 +36,9 @@ def schwab_init(API_METADATA=None):
         name = f"{CURRENT_USER_ID}-Schwab {index}"
         try:
             account = account.split(":")
-            schwab = Schwab(session_cache=f"./creds/schwab_{CURRENT_USER_ID}_{index}.json")
+            schwab = Schwab(
+                session_cache=f"./creds/schwab_{CURRENT_USER_ID}_{index}.json"
+            )
             logged_in = schwab.login(
                 username=account[0],
                 password=account[1],
@@ -63,7 +65,13 @@ def schwab_init(API_METADATA=None):
     return schwab_obj
 
 
-def schwab_holdings(schwab_o: Brokerage, loop=None):
+def schwab_holdings(
+    schwab_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     # Get holdings on each account
     for key in schwab_o.get_account_numbers():
         obj: Schwab = schwab_o.get_logged_in_objects(key)
@@ -86,7 +94,14 @@ def schwab_holdings(schwab_o: Brokerage, loop=None):
             except Exception as e:
                 printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
                 print(traceback.format_exc())
-    printHoldings(schwab_o, loop)
+    # printHoldings(schwab_o, loop)
+    printHoldings(
+        botObj,
+        CURRENT_USER_ID,
+        schwab_o,
+        loop,
+        False,
+    )
 
 
 def schwab_transaction(schwab_o: Brokerage, orderObj: stockOrder, loop=None):

@@ -129,7 +129,10 @@ def chase_init(
                     loop,
                 ).result()
                 if sms_code is None:
-                    raise Exception(f"{CURRENT_USER_ID}-Chase {index} code not received in time...", loop)
+                    raise Exception(
+                        f"{CURRENT_USER_ID}-Chase {index} code not received in time...",
+                        loop,
+                    )
                 ch_session.login_two(sms_code)
         # Create an AllAccounts class object using the current browser session. Holds information about all accounts
         all_accounts = ch_account.AllAccount(ch_session)
@@ -159,7 +162,14 @@ def chase_init(
     return [chase_obj, all_accounts]
 
 
-def chase_holdings(chase_o: Brokerage, all_accounts: ch_account.AllAccount, loop=None):
+def chase_holdings(
+    chase_o: Brokerage,
+    all_accounts: ch_account.AllAccount,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     """
     Get the holdings of chase account
 
@@ -180,7 +190,7 @@ def chase_holdings(chase_o: Brokerage, all_accounts: ch_account.AllAccount, loop
                 account_id = get_account_id(all_accounts.account_connectors, account)
                 data = symbols.SymbolHoldings(account_id, ch_session)
                 success = data.get_holdings()
-                
+
                 if success:
                     for i, _ in enumerate(data.positions):
                         if (
@@ -218,7 +228,14 @@ def chase_holdings(chase_o: Brokerage, all_accounts: ch_account.AllAccount, loop
             finally:
                 if ch_session:
                     ch_session.close_browser()
-        printHoldings(chase_o, loop)
+        # printHoldings(chase_o, loop)
+        printHoldings(
+            botObj,
+            CURRENT_USER_ID,
+            chase_o,
+            loop,
+            False,
+        )
     if ch_session:
         ch_session.close_browser()
 
