@@ -225,9 +225,8 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                         globals()[fun_name](
                             logged_in_broker,
                             loop,
-                            botObj=botObj,
-                            loop=loop,
                             API_METADATA=API_METADATA,
+                            botObj=botObj,
                         )
                     elif second_command == "_transaction":
                         fun_name = broker + second_command
