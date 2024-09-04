@@ -704,46 +704,54 @@ async def printHoldings(
     mask=True,
 ):
     # Fetch the user object using their ID
-    user = await botObj.fetch_user(expected_user_id)
-    if user is None:
-        printAndDiscord(f"Could not find user with ID {expected_user_id}", loop)
+    try:
+        user = await botObj.fetch_user(expected_user_id)
+        if not user:
+            raise ValueError(f"Could not find user with ID {expected_user_id}")
+    except Exception as e:
+        printAndDiscord(str(e), loop)
         return None
 
+    # Prepare embed for Discord message
+    embed = discord.Embed(title=f"{brokerObj.get_name()} Holdings", color=3447003)
+
     # Helper function for holdings formatting
-    EMBED = {
-        "title": f"{brokerObj.get_name()} Holdings",
-        "color": 3447003,
-        "fields": [],
-    }
+
     print(
         f"==============================\n{brokerObj.get_name()} Holdings\n=============================="
     )
+
     for key in brokerObj.get_account_numbers():
         for account in brokerObj.get_account_numbers(key):
             acc_name = f"{key} ({maskString(account) if mask else account})"
-            field = {
-                "name": acc_name,
-                "inline": False,
-            }
+            field_value = ""
             print(acc_name)
-            print_string = ""
+
             holdings = brokerObj.get_holdings(key, account)
-            if holdings == {}:
-                print_string += "No holdings in Account\n"
+            if not holdings:
+                field_value = "No holdings in Account\n"
             else:
-                for stock in holdings:
-                    quantity = holdings[stock]["quantity"]
-                    price = holdings[stock]["price"]
-                    total = holdings[stock]["total"]
-                    print_string += f"{stock}: {quantity} @ ${format(price, '0.2f')} = ${format(total, '0.2f')}\n"
-            print_string += f"Total: ${format(brokerObj.get_account_totals(key, account), '0.2f')}\n"
-            print(print_string)
-            # If somehow longer than 1024, chop and add ...
-            field["value"] = (
-                print_string[:1020] + "..."
-                if len(print_string) > 1024
-                else print_string
+                for stock, details in holdings.items():
+                    quantity = details["quantity"]
+                    price = details["price"]
+                    total = details["total"]
+                    field_value += f"{stock}: {quantity} @ ${format(price, '0.2f')} = ${format(total, '0.2f')}\n"
+
+            total_value = brokerObj.get_account_totals(key, account)
+            field_value += f"Total: ${format(total_value, '0.2f')}\n"
+            print(field_value)
+
+            # Truncate the field value if it exceeds Discord's embed limit
+            field_value = (
+                field_value[:1020] + "..." if len(field_value) > 1024 else field_value
             )
-            EMBED["fields"].append(field)
-    await user.send(embed=EMBED)
+
+            embed.add_field(name=acc_name, value=field_value, inline=False)
+
+    # Send the embed message to the user
+    try:
+        await user.send(embed=embed)
+    except Exception as e:
+        printAndDiscord(f"Failed to send message: {str(e)}", loop)
+
     print("==============================")
