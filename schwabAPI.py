@@ -65,7 +65,7 @@ def schwab_init(API_METADATA=None):
     return schwab_obj
 
 
-def schwab_holdings(
+async def schwab_holdings(
     schwab_o: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -94,8 +94,8 @@ def schwab_holdings(
             except Exception as e:
                 printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
                 print(traceback.format_exc())
-    # printHoldings(schwab_o, loop)
-    printHoldings(
+    # await printHoldings(schwab_o, loop)
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         schwab_o,

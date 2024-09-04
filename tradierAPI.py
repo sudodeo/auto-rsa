@@ -109,7 +109,7 @@ def tradier_init(API_METADATA=None):
     return tradier_obj
 
 
-def tradier_holdings(
+async def tradier_holdings(
     tradier_o: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -168,8 +168,8 @@ def tradier_holdings(
                 printAndDiscord(f"{key}: Error getting holdings: {e}", loop=loop)
                 print(traceback.format_exc())
                 continue
-    # printHoldings(tradier_o, loop=loop)
-    printHoldings(
+    # await printHoldings(tradier_o, loop=loop)
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         tradier_o,

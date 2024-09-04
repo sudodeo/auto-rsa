@@ -92,7 +92,7 @@ async def public_init(API_METADATA=None, botObj=None, loop=None):
     return public_obj
 
 
-def public_holdings(
+async def public_holdings(
     pbo: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -118,8 +118,8 @@ def public_holdings(
                 printAndDiscord(f"{key}: Error getting account holdings: {e}", loop)
                 traceback.format_exc()
                 continue
-    # printHoldings(pbo, loop)
-    printHoldings(
+    # await printHoldings(pbo, loop)
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         pbo,

@@ -166,8 +166,8 @@ async def fidelity_init(API_METADATA=None, DOCKER=False, botObj=None, loop=None)
                 timeout = 300  # 5 minutes
                 if botObj is not None and loop is not None:
                     sms_code = await getOTPCodeDiscord(
-                            botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
-                        )
+                        botObj, CURRENT_USER_ID, name, timeout=timeout, loop=loop
+                    )
                     if sms_code is None:
                         raise Exception("No SMS code found")
                 else:
@@ -280,7 +280,12 @@ def fidelity_account_info(driver: webdriver) -> dict | None:
         return None
 
 
-def fidelity_holdings(fidelity_o: Brokerage, loop=None,API_METADATA=None, botObj=None,):
+async def fidelity_holdings(
+    fidelity_o: Brokerage,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
     CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in fidelity_o.get_account_numbers():
         driver: webdriver = fidelity_o.get_logged_in_objects(key)
@@ -316,7 +321,7 @@ def fidelity_holdings(fidelity_o: Brokerage, loop=None,API_METADATA=None, botObj
             except Exception as e:
                 fidelity_error(driver, e)
                 continue
-    printHoldings(
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         fidelity_o,

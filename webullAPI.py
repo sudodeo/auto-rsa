@@ -96,7 +96,7 @@ def webull_init(API_METADATA=None):
     return wb_obj
 
 
-def webull_holdings(
+async def webull_holdings(
     wbo: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -133,8 +133,8 @@ def webull_holdings(
                 printAndDiscord(f"{key}: Error getting holdings: {e}", loop)
                 traceback.print_exc()
                 continue
-    # printHoldings(wbo, loop=loop)
-    printHoldings(
+    # await printHoldings(wbo, loop=loop)
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         wbo,

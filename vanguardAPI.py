@@ -117,7 +117,7 @@ def vanguard_init(
     return vanguard_obj
 
 
-def vanguard_holdings(
+async def vanguard_holdings(
     vanguard_o: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -153,8 +153,8 @@ def vanguard_holdings(
             printAndDiscord(f"{key} {account}: Error getting holdings: {e}", loop)
             print(traceback.format_exc())
             continue
-        # printHoldings(vanguard_o, loop)
-        printHoldings(
+        # await printHoldings(vanguard_o, loop)
+        await printHoldings(
             botObj,
             CURRENT_USER_ID,
             vanguard_o,

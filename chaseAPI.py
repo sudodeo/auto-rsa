@@ -162,7 +162,7 @@ def chase_init(
     return [chase_obj, all_accounts]
 
 
-def chase_holdings(
+async def chase_holdings(
     chase_o: Brokerage,
     all_accounts: ch_account.AllAccount,
     loop=None,
@@ -228,8 +228,8 @@ def chase_holdings(
             finally:
                 if ch_session:
                     ch_session.close_browser()
-        # printHoldings(chase_o, loop)
-        printHoldings(
+        # await printHoldings(chase_o, loop)
+        await printHoldings(
             botObj,
             CURRENT_USER_ID,
             chase_o,

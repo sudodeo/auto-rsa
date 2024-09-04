@@ -83,7 +83,7 @@ def robinhood_init(API_METADATA=None):
     return rh_obj
 
 
-def robinhood_holdings(
+async def robinhood_holdings(
     rho: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -114,8 +114,8 @@ def robinhood_holdings(
                 printAndDiscord(f"{key}: Error getting account holdings: {e}", loop)
                 traceback.format_exc()
                 continue
-    # printHoldings(rho, loop)
-    printHoldings(
+    # await printHoldings(rho, loop)
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         rho,

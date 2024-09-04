@@ -152,7 +152,7 @@ def tornado_extract_holdings(driver):
     return holdings_data
 
 
-def tornado_holdings(
+async def tornado_holdings(
     Tornado_o: Brokerage,
     loop=None,
     API_METADATA=None,
@@ -204,8 +204,8 @@ def tornado_holdings(
         tornado_error(driver, loop)
         printAndDiscord(f"Tornado Account: Error processing holdings: {e}", loop)
 
-    # printHoldings(Tornado_o, loop)  # Send the holdings to Discord
-    printHoldings(
+    # await printHoldings(Tornado_o, loop)  # Send the holdings to Discord
+    await printHoldings(
         botObj,
         CURRENT_USER_ID,
         Tornado_o,

@@ -222,7 +222,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                     # Get holdings or complete transaction
                     if second_command == "_holdings":
                         fun_name = broker + second_command
-                        globals()[fun_name](
+                        await globals()[fun_name](
                             logged_in_broker,
                             loop,
                             API_METADATA=API_METADATA,
