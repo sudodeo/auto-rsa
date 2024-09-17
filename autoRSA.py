@@ -205,7 +205,10 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                         raise RuntimeError(
                             f"Error in {fun_name}: Function did not complete successfully. Error: {err}"
                         )
-
+                elif broker.lower() == "schwab":
+                    orderObj.set_logged_in(
+                        await globals()[fun_name](API_METADATA=API_METADATA), broker
+                    )
                 else:
                     orderObj.set_logged_in(
                         globals()[fun_name](API_METADATA=API_METADATA), broker

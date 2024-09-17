@@ -11,7 +11,7 @@ from schwab_api import Schwab
 from helperAPI import Brokerage, maskString, printAndDiscord, printHoldings, stockOrder
 
 
-def schwab_init(API_METADATA=None):
+async def schwab_init(API_METADATA=None):
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -19,18 +19,22 @@ def schwab_init(API_METADATA=None):
     if API_METADATA:
         EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
         CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
+    
     # Import Schwab account
     if not os.getenv("SCHWAB") and EXTERNAL_CREDENTIALS is None:
         print("Schwab not found, skipping...")
         return None
+    
     accounts = (
         os.environ["SCHWAB"].strip().split(",")
         if EXTERNAL_CREDENTIALS is None
         else EXTERNAL_CREDENTIALS.strip().split(",")
     )
+    
     # Log in to Schwab account
     print("Logging in to Schwab...")
     schwab_obj = Brokerage("Schwab")
+    
     for account in accounts:
         index = accounts.index(account) + 1
         name = f"{CURRENT_USER_ID}-Schwab {index}"
@@ -39,13 +43,18 @@ def schwab_init(API_METADATA=None):
             schwab = Schwab(
                 session_cache=f"./creds/schwab_{CURRENT_USER_ID}_{index}.json"
             )
-            logged_in = schwab.login(
+
+            # Move the login process to a separate thread
+            logged_in = await asyncio.to_thread(
+                schwab.login,
                 username=account[0],
                 password=account[1],
                 totp_secret=None if account[2].upper() == "NA" else account[2],
             )
+            
             if not logged_in:
                 raise Exception("Login failed")
+            
             print("getting account info...")
             account_info = schwab.get_account_info_v2()
             account_list = list(account_info.keys())
@@ -53,15 +62,18 @@ def schwab_init(API_METADATA=None):
             print(f"The following Schwab accounts were found: {print_accounts}")
             print("Logged in to Schwab!")
             schwab_obj.set_logged_in_object(name, schwab)
+            
             for account in account_list:
                 schwab_obj.set_account_number(name, account)
                 schwab_obj.set_account_totals(
                     name, account, account_info[account]["account_value"]
                 )
+        
         except Exception as e:
             print(f"Error logging in to Schwab: {e}")
             print(traceback.format_exc())
             return None
+    
     return schwab_obj
 
 
