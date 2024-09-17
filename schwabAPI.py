@@ -1,6 +1,7 @@
 # Nelson Dane
 # Schwab API
 
+import asyncio
 import os
 import traceback
 from time import sleep
