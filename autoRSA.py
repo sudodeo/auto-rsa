@@ -23,6 +23,9 @@ print()
 
 try:
     import discord
+
+    # from slash_commands import SlashCommands
+    # from discord import app_commands
     from discord.ext import commands
     from dotenv import load_dotenv
 
@@ -387,6 +390,9 @@ async def main():
         DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
         DISCORD_CHANNEL = int(os.getenv("DISCORD_CHANNEL"))
         RSA_BOT_ROLE_ID = int(os.getenv("RSA_BOT_ROLE_ID"))
+        RSA_MENTEE_ROLE_ID = int(os.getenv("RSA_MENTEE_ROLE_ID"))
+        RSAUTOMATION_ROLE_ID = int(os.getenv("RSAUTOMATION_ROLE_ID"))
+
         RSA_ADMIN_ROLE_ID = int(os.getenv("RSA_ADMIN_ROLE_ID"))
         # Initialize discord bot
         intents = discord.Intents.default()
@@ -445,8 +451,11 @@ async def main():
         # Process the message only if it's from the specified channel
         @bot.event
         async def on_message(message):
-            # if message.channel.id == DISCORD_CHANNEL:
-            await bot.process_commands(message)
+            if (
+                isinstance(message.channel, discord.DMChannel)
+                or message.channel.id == DISCORD_CHANNEL
+            ):
+                await bot.process_commands(message)
 
         # Bot ping-pong
         @bot.command(name="ping")
@@ -468,7 +477,9 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
 
         # Main RSA command
         @bot.command(name="rsa")
-        @commands.has_role(RSA_BOT_ROLE_ID)
+        @commands.has_any_role(
+            RSA_BOT_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID
+        )
         async def rsa(ctx, *args):
             await ensure_db_connection()
             discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
@@ -681,6 +692,8 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                 await ctx.send(f"Command Error: {error}")
                 # Print help command
                 await ctx.send("Type '!helprsa' for a list of commands")
+
+        # await bot.load_extension("slash_commands")
 
         # Run Discord bot
         async with bot:
