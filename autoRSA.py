@@ -461,7 +461,7 @@ async def main():
 
         # Help command
         @bot.command()
-        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
+        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID)
         async def helprsa(ctx):
             # String of available commands
             await ctx.send(
@@ -599,7 +599,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                 await ctx.send(f"Error adding {broker} account: {e}")
 
         @bot.command(name="removersa")
-        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID)
+        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID)
         async def removersa(ctx, broker):
             await ensure_db_connection()
             try:
