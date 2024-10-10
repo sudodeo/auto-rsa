@@ -631,7 +631,7 @@ class FidelityAutomation:
 
 
 async def fidelity_run(
-    orderObj: stockOrder, command=None, botObj=None, loop=None, FIDELITY_EXTERNAL=None
+    orderObj: stockOrder, command=None, botObj=None, loop=None, API_METADATA=None
 ):
     """
     Entry point from main function. Gathers credentials and go through commands for
