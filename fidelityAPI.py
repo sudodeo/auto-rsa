@@ -653,8 +653,8 @@ async def fidelity_run(
         return None
     accounts = (
         os.environ["FIDELITY"].strip().split(",")
-        if FIDELITY_EXTERNAL is None
-        else FIDELITY_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     # Get headless flag
     headless = os.getenv("HEADLESS", "true").lower() == "true"
@@ -673,6 +673,7 @@ async def fidelity_run(
             headless=headless,
             botObj=botObj,
             loop=loop,
+            CURRENT_USER_ID=CURRENT_USER_ID,
         )
         if fidelityobj is not None:
             # Store the Brokerage object for fidelity under 'fidelity' in the orderObj
@@ -685,7 +686,9 @@ async def fidelity_run(
     return None
 
 
-async def fidelity_init(account: str, name: str, headless=True, botObj=None, loop=None):
+async def fidelity_init(
+    account: str, name: str, headless=True, botObj=None, loop=None, CURRENT_USER_ID=None
+):
     """
     Log into fidelity. Creates a fidelity brokerage object and a FidelityAutomation object.
     The FidelityAutomation object is stored within the brokerage object and some account information
@@ -723,7 +726,17 @@ async def fidelity_init(account: str, name: str, headless=True, botObj=None, loo
             else:
                 timeout = 300  # 5 minutes
                 # Should wait for 60 seconds before timeout
-                sms_code = await getOTPCodeDiscord(botObj, CURRENT_USER_ID, name, code_len=6, timeout=timeout,loop=loop), loop
+                sms_code = (
+                    await getOTPCodeDiscord(
+                        botObj,
+                        CURRENT_USER_ID,
+                        name,
+                        code_len=6,
+                        timeout=timeout,
+                        loop=loop,
+                    ),
+                    loop,
+                )
                 if sms_code is None:
                     raise Exception(f"{name} No SMS code found", loop)
                 fidelity_browser.login_2FA(sms_code)
