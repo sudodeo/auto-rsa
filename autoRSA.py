@@ -461,7 +461,9 @@ async def main():
 
         # Help command
         @bot.command()
-        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID)
+        @commands.has_any_role(
+            RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID
+        )
         async def helprsa(ctx):
             # String of available commands
             await ctx.send(
@@ -524,34 +526,32 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
             else:
                 os.execv(sys.executable, [sys.executable] + sys.argv)
 
-        # rsaadd command
         @bot.command(name="rsaadd")
-        async def rsaadd(ctx, broker, credentials):
+        async def rsaadd(ctx, broker=None, credentials=None):
             await ensure_db_connection()
+
             try:
                 if not isinstance(ctx.channel, discord.DMChannel):
                     await ctx.send("This command can only be used via DM.")
                     return
+
+                if not broker or not credentials:
+                    raise commands.MissingRequiredArgument(param=None)
 
                 broker = broker.lower()
                 if broker not in SUPPORTED_BROKERS:
                     raise Exception(f"{broker} is not a supported broker")
 
                 # Handle different broker-specific credential formats
-                # if broker == "chase":
-                #     if len(credentials.split(":")) != 4:
-                #         raise Exception(
-                #             "Invalid credentials. Use this format: username:password:last4PhoneDigits:trueOrfalse"
-                #         )
-                elif broker == "fennel":
+                if broker == "fennel":
                     if "@" not in credentials or len(credentials.split(":")) != 1:
                         raise Exception(
                             "Invalid credentials. Just enter your email for Fennel."
                         )
-                elif broker in ["robinhood"]:  # ,"firstrade", "schwab"]:
+                elif broker == "robinhood":
                     if len(credentials.split(":")) != 3:
                         raise Exception(
-                            f"Invalid credentials. Use this format for {broker}: username:password:otp_or_totp_secret|NA"
+                            "Invalid credentials. Use this format for Robinhood: username:password:otp_or_totp_secret|NA"
                         )
                 elif broker == "tradier":
                     if len(credentials.split(":")) != 1:
@@ -582,7 +582,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                     """
                     INSERT INTO rsa_credentials (user_id, broker, credentials)
                     VALUES (?, ?, ?) ON CONFLICT (user_id, broker) DO UPDATE SET credentials = ? 
-                """,
+                    """,
                     (
                         str(ctx.author.id),
                         broker,
@@ -599,7 +599,9 @@ Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247
                 await ctx.send(f"Error adding {broker} account: {e}")
 
         @bot.command(name="removersa")
-        @commands.has_any_role(RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID)
+        @commands.has_any_role(
+            RSA_BOT_ROLE_ID, RSA_ADMIN_ROLE_ID, RSA_MENTEE_ROLE_ID, RSAUTOMATION_ROLE_ID
+        )
         async def removersa(ctx, broker):
             await ensure_db_connection()
             try:
