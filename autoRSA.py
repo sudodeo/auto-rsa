@@ -136,7 +136,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
         for broker in order_brokers:
             # robin hood is currently unavailable
             if broker == "robinhood":
-                printAndDiscord(f"Robinhood is currently unavailable", loop)
+                # printAndDiscord(f"Robinhood is currently unavailable", loop)
                 continue
             if broker in orderObj.get_notbrokers():
                 continue
@@ -153,12 +153,17 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             ) as cursor:
                 encrypted_credentials = await cursor.fetchone()
             if not encrypted_credentials:
-                print(
-                    f"{broker} account does not exist for user with id {author_id}, skipping..."
-                )
-                printAndDiscord(
-                    f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM"
-                )
+                # print(
+                #     f"{broker} account does not exist for user with id {author_id}, skipping..."
+                # )
+                # try:
+                #     user = await botObj.fetch_user(author_id)
+                #     if not user:
+                #         raise ValueError(f"Could not find user with ID {author_id}")
+                #     await user.send(f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM")
+                # except Exception as e:
+                #     printAndDiscord(str(e), loop)
+
                 continue
 
             decrypted_credentials = decrypt_credential(encrypted_credentials[0])
