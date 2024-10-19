@@ -135,7 +135,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             return
         for broker in order_brokers:
             # robin hood is currently unavailable
-            if broker == "robinhood":
+            if broker == "robinhood" or broker == "fidelity":
                 # printAndDiscord(f"Robinhood is currently unavailable", loop)
                 continue
             if broker in orderObj.get_notbrokers():
@@ -251,7 +251,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                 print(f"Error in {fun_name} with {broker}: {ex}")
                 print(orderObj)
             print()
-        printAndDiscord("All commands complete in all brokers", loop)
+        printAndDiscord("All commands complete in all registered brokers", loop)
     else:
         print(f"Error: {command} is not a valid command")
 
