@@ -765,6 +765,9 @@ async def fidelity_init(
         print(f"Error logging in to Fidelity: {e}")
         print(traceback.format_exc())
         return None
+    finally:
+        if fidelity_browser is not None:
+            fidelity_browser.close_browser()
 
 
 async def fidelity_holdings(fidelity_o: Brokerage, name: str, loop=None):
@@ -783,25 +786,30 @@ async def fidelity_holdings(fidelity_o: Brokerage, name: str, loop=None):
     """
 
     # Get the browser back from the fidelity object
-    fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
-    account_dict = fidelity_browser.account_dict
-    for account_number in account_dict:
+    try:
+        fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
+        account_dict = fidelity_browser.account_dict
+        for account_number in account_dict:
 
-        for d in account_dict[account_number]["stocks"]:
-            # Append the ticker to the appropriate account
-            fidelity_o.set_holdings(
-                parent_name=name,
-                account_name=account_number,
-                stock=d["ticker"],
-                quantity=d["quantity"],
-                price=d["last_price"],
-            )
+            for d in account_dict[account_number]["stocks"]:
+                # Append the ticker to the appropriate account
+                fidelity_o.set_holdings(
+                    parent_name=name,
+                    account_name=account_number,
+                    stock=d["ticker"],
+                    quantity=d["quantity"],
+                    price=d["last_price"],
+                )
 
-    # Print to console and to discord
-    await printHoldings(fidelity_o, loop)
-
-    # Close browser
-    fidelity_browser.close_browser()
+        # Print to console and to discord
+        await printHoldings(fidelity_o, loop)
+    except Exception as e:
+        # printAndDiscord(f"{name}: Error getting holdings: {e}", loop)
+        print(traceback.format_exc())
+        return None
+    finally:
+        if fidelity_browser is not None:
+            fidelity_browser.close_browser()
 
 
 def fidelity_transaction(
@@ -822,43 +830,48 @@ def fidelity_transaction(
     """
 
     # Get the driver
-    fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
-    # Go trade
-    for stock in orderObj.get_stocks():
-        # Say what we are doing
-        printAndDiscord(
-            f"{name}: {orderObj.get_action()}ing {orderObj.get_amount()} of {stock}",
-            loop,
-        )
-        # Reload the page incase we were trading before
-        fidelity_browser.page.reload()
-        for account_number in fidelity_o.get_account_numbers(name):
-            # Go trade for all accounts for that stock
-            success, error_message = fidelity_browser.transaction(
-                stock,
-                orderObj.get_amount(),
-                orderObj.get_action(),
-                account_number,
-                orderObj.get_dry(),
+    try:
+        fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
+        # Go trade
+        for stock in orderObj.get_stocks():
+            # Say what we are doing
+            printAndDiscord(
+                f"{name}: {orderObj.get_action()}ing {orderObj.get_amount()} of {stock}",
+                loop,
             )
-            # Report error if occurred
-            if not success:
-                printAndDiscord(
-                    f"{name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} {error_message}",
-                    loop,
+            # Reload the page incase we were trading before
+            fidelity_browser.page.reload()
+            for account_number in fidelity_o.get_account_numbers(name):
+                # Go trade for all accounts for that stock
+                success, error_message = fidelity_browser.transaction(
+                    stock,
+                    orderObj.get_amount(),
+                    orderObj.get_action(),
+                    account_number,
+                    orderObj.get_dry(),
                 )
-            # Print test run confirmation if test run
-            elif success and orderObj.get_dry():
-                printAndDiscord(
-                    f"DRY: {name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} shares of {stock}",
-                    loop,
-                )
-            # Print real run confirmation if real run
-            elif success and not orderObj.get_dry():
-                printAndDiscord(
-                    f"{name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} shares of {stock}",
-                    loop,
-                )
-
-    # Close browser
-    fidelity_browser.close_browser()
+                # Report error if occurred
+                if not success:
+                    printAndDiscord(
+                        f"{name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} {error_message}",
+                        loop,
+                    )
+                # Print test run confirmation if test run
+                elif success and orderObj.get_dry():
+                    printAndDiscord(
+                        f"DRY: {name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} shares of {stock}",
+                        loop,
+                    )
+                # Print real run confirmation if real run
+                elif success and not orderObj.get_dry():
+                    printAndDiscord(
+                        f"{name} account xxxxx{account_number[-4:]}: {orderObj.get_action()} {orderObj.get_amount()} shares of {stock}",
+                        loop,
+                    )
+    except Exception as e:
+        # printAndDiscord(f"{name}: Error trading: {e}", loop)
+        print(traceback.format_exc())
+        return None
+    finally:
+        if fidelity_browser is not None:
+            fidelity_browser.close_browser()
