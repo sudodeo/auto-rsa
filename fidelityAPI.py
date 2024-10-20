@@ -70,7 +70,7 @@ class FidelityAutomation:
 
             # Launch the browser
             self.browser = await self.playwright.firefox.launch(
-                headless=self.headless,
+                headless=False,#self.headless,
                 args=["--disable-webgl", "--disable-software-rasterizer"],
             )
 
@@ -333,7 +333,7 @@ class FidelityAutomation:
         )
 
         # Download the positions as a csv
-        with await self.page.expect_download() as download_info:
+        async with self.page.expect_download() as download_info:
             await self.page.get_by_label("Download Positions").click()
         download = download_info.value
         cur = os.getcwd()
@@ -809,9 +809,10 @@ async def fidelity_init(
                     ),
                     loop,
                 )
+                print("sms_code: ",sms_code,str(sms_code))
                 if sms_code is None:
                     raise Exception(f"{name} No SMS code found", loop)
-                await fidelity_browser.login_2FA(sms_code)
+                await fidelity_browser.login_2FA(str(sms_code))
         elif not step_1:
             raise Exception(
                 f"{name}: Login Failed. Got Error Page: Current URL: {fidelity_browser.page.url}"
