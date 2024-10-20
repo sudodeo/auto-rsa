@@ -70,7 +70,7 @@ class FidelityAutomation:
 
             # Launch the browser
             self.browser = await self.playwright.firefox.launch(
-                headless=False,#self.headless,
+                headless=False,  # self.headless,
                 args=["--disable-webgl", "--disable-software-rasterizer"],
             )
 
@@ -798,18 +798,16 @@ async def fidelity_init(
             else:
                 timeout = 300  # 5 minutes
                 # Should wait for 60 seconds before timeout
-                sms_code = (
-                    await getOTPCodeDiscord(
-                        botObj,
-                        CURRENT_USER_ID,
-                        name,
-                        code_len=6,
-                        timeout=timeout,
-                        loop=loop,
-                    ),
-                    loop,
+                sms_code = await getOTPCodeDiscord(
+                    botObj,
+                    CURRENT_USER_ID,
+                    name,
+                    code_len=6,
+                    timeout=timeout,
+                    loop=loop,
                 )
-                print("sms_code: ",sms_code,str(sms_code))
+
+                print("sms_code: ", sms_code, str(sms_code))
                 if sms_code is None:
                     raise Exception(f"{name} No SMS code found", loop)
                 await fidelity_browser.login_2FA(str(sms_code))
@@ -868,7 +866,7 @@ async def fidelity_holdings(
     try:
         CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
         fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
-        
+
         account_dict = fidelity_browser.account_dict
         for account_number in account_dict:
 
