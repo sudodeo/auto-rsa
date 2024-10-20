@@ -144,7 +144,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
     if command in [("_init", "_holdings"), ("_init", "_transaction")]:
         try:
             db = await ensure_db_connection()
-
+            
             order_brokers = orderObj.get_brokers()
             if len(order_brokers) == 0:
                 printAndDiscord(f"<@{author_id}> No brokers to run", loop)
@@ -179,7 +179,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                     "EXTERNAL_CREDENTIALS": decrypted_credentials,
                     "CURRENT_USER_ID": author_id,
                 }
-
+                
                 broker = nicknames(broker)
                 init_command, second_command = command
                 try:
@@ -197,24 +197,25 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                         fun_name = broker + "_run"
 
                         # Playwright brokers have to run all transactions with one function
-                        coroutine = globals()[fun_name](
-                            orderObj=orderObj,
-                            command=command,
-                            botObj=botObj,
-                            loop=loop,
-                            API_METADATA=API_METADATA,
-                        )
+                        try:
+                            result = await globals()[fun_name](
+                                orderObj=orderObj,
+                                command=command,
+                                botObj=botObj,
+                                loop=loop,
+                                API_METADATA=API_METADATA,
+                            )
 
                         # Run the coroutine in the main event loop
-                        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
-                        try:
-                            result = (
-                                future.result()
-                            )  # This will block until the coroutine completes
-                            if result is None:
-                                raise RuntimeError(
-                                    f"Error in {fun_name}: Function did not complete successfully."
-                                )
+                        # future = asyncio.run_coroutine_threadsafe(coroutine, loop)
+                        # try:
+                        #     result = (
+                        #         future.result()
+                        #     )  # This will block until the coroutine completes
+                        #     if result is None:
+                        #         raise RuntimeError(
+                        #             f"Error in {fun_name}: Function did not complete successfully."
+                        #         )
                         except Exception as err:
                             raise RuntimeError(f"Error in {fun_name}: {err}")
                     elif broker.lower() == "schwab":

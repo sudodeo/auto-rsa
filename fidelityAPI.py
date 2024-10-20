@@ -13,8 +13,8 @@ import traceback
 import pyotp
 from dotenv import load_dotenv
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import sync_playwright
-from playwright_stealth import StealthConfig, stealth_sync
+from playwright.async_api import async_playwright
+from playwright_stealth import StealthConfig, stealth_async
 
 from helperAPI import (
     Brokerage,
@@ -41,15 +41,61 @@ class FidelityAutomation:
             navigator_user_agent=False,
             navigator_vendor=False,
         )
-        self.getDriver()
+        self.playwright = None
+        self.browser = None
+        self.context = None
+        self.page = None
 
-    def getDriver(self):
+    async def initialize(self):
+        """
+        Asynchronously initializes the playwright webdriver for use in subsequent functions.
+        Creates and applies stealth settings to playwright context wrapper.
+        """
+        try:
+            # Set the context wrapper
+            self.playwright = await async_playwright().start()
+
+            # Create or load cookies
+            self.profile_path = os.path.abspath(self.profile_path)
+            if self.title is not None:
+                self.profile_path = os.path.join(
+                    self.profile_path, f"Fidelity_{self.title}.json"
+                )
+            else:
+                self.profile_path = os.path.join(self.profile_path, "Fidelity.json")
+            if not os.path.exists(self.profile_path):
+                os.makedirs(os.path.dirname(self.profile_path), exist_ok=True)
+                with open(self.profile_path, "w") as f:
+                    json.dump({}, f)
+
+            # Launch the browser
+            self.browser = await self.playwright.firefox.launch(
+                headless=False,  # self.headless,
+                args=["--disable-webgl", "--disable-software-rasterizer"],
+            )
+
+            self.context = await self.browser.new_context(
+                storage_state=self.profile_path if self.title is not None else None
+            )
+            self.page = await self.context.new_page()
+            # Apply stealth settings
+            await stealth_async(self.page, self.stealth_config)
+        except Exception as e:
+            print(f"Error during initialization: {e}")
+            print(traceback.format_exc())
+            if self.browser:
+                await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
+            raise
+
+    async def getDriver(self):
         """
         Initializes the playwright webdriver for use in subsequent functions.
         Creates and applies stealth settings to playwright context wrapper.
         """
         # Set the context wrapper
-        self.playwright = sync_playwright().start()
+        self.playwright = await async_playwright().start()
 
         # Create or load cookies
         self.profile_path = os.path.abspath(self.profile_path)
@@ -65,19 +111,19 @@ class FidelityAutomation:
                 json.dump({}, f)
 
         # Launch the browser
-        self.browser = self.playwright.firefox.launch(
-            headless=self.headless,
+        self.browser = await self.playwright.firefox.launch(
+            headless=False,  # self.headless,
             args=["--disable-webgl", "--disable-software-rasterizer"],
         )
 
-        self.context = self.browser.new_context(
+        self.context = await self.browser.new_context(
             storage_state=self.profile_path if self.title is not None else None
         )
-        self.page = self.context.new_page()
+        self.page = await self.context.new_page()
         # Apply stealth settings
-        stealth_sync(self.page, self.stealth_config)
+        await stealth_async(self.page, self.stealth_config)
 
-    def save_storage_state(self):
+    async def save_storage_state(self):
         """
         Saves the storage state of the browser to a file.
 
@@ -86,24 +132,26 @@ class FidelityAutomation:
         Args:
             filename (str): The name of the file to save the storage state to.
         """
-        storage_state = self.page.context.storage_state()
+        storage_state = await self.page.context.storage_state()
         with open(self.profile_path, "w") as f:
             json.dump(storage_state, f)
 
-    def close_browser(self):
+    async def close_browser(self):
         """
         Closes the playwright browser
         Use when you are completely done with this class
         """
         # Save cookies
-        self.save_storage_state()
+        await self.save_storage_state()
         # Close context before browser as directed by documentation
-        self.context.close()
-        self.browser.close()
+        await self.context.close()
+        await self.browser.close()
         # Stop the instance of playwright
-        self.playwright.stop()
+        await self.playwright.stop()
 
-    def login(self, username: str, password: str, totp_secret: str = None) -> bool:
+    async def login(
+        self, username: str, password: str, totp_secret: str = None
+    ) -> bool:
         """
         Logs into fidelity using the supplied username and password.
 
@@ -115,20 +163,20 @@ class FidelityAutomation:
         """
         try:
             # Go to the login page
-            self.page.goto(
+            await self.page.goto(
                 "https://digital.fidelity.com/prgw/digital/login/full-page",
                 timeout=60000,
             )
 
             # Login page
-            self.page.get_by_label("Username", exact=True).click()
-            self.page.get_by_label("Username", exact=True).fill(username)
-            self.page.get_by_label("Password", exact=True).click()
-            self.page.get_by_label("Password", exact=True).fill(password)
-            self.page.get_by_role("button", name="Log in").click()
+            await self.page.get_by_label("Username", exact=True).click()
+            await self.page.get_by_label("Username", exact=True).fill(username)
+            await self.page.get_by_label("Password", exact=True).click()
+            await self.page.get_by_label("Password", exact=True).fill(password)
+            await self.page.get_by_role("button", name="Log in").click()
             try:
                 # See if we got to the summary page
-                self.page.wait_for_url(
+                await self.page.wait_for_url(
                     "https://digital.fidelity.com/ftgw/digital/portfolio/summary",
                     timeout=30000,
                 )
@@ -147,22 +195,22 @@ class FidelityAutomation:
                 # If TOTP secret is provided, we are will use the TOTP key. See if authenticator code is present
                 if (
                     totp_secret is not None
-                    and self.page.get_by_role(
+                    and await self.page.get_by_role(
                         "heading", name="Enter the code from your"
                     ).is_visible()
                 ):
                     # Get authenticator code
                     code = pyotp.TOTP(totp_secret).now()
                     # Enter the code
-                    self.page.get_by_placeholder("XXXXXX").click()
-                    self.page.get_by_placeholder("XXXXXX").fill(code)
+                    await self.page.get_by_placeholder("XXXXXX").click()
+                    await self.page.get_by_placeholder("XXXXXX").fill(code)
 
                     # Prevent future OTP requirements
-                    self.page.locator("label").filter(
+                    await self.page.locator("label").filter(
                         has_text="Don't ask me again on this"
                     ).check()
                     if (
-                        not self.page.locator("label")
+                        not await self.page.locator("label")
                         .filter(has_text="Don't ask me again on this")
                         .is_checked()
                     ):
@@ -171,10 +219,10 @@ class FidelityAutomation:
                         )
 
                     # Log in with code
-                    self.page.get_by_role("button", name="Continue").click()
+                    await self.page.get_by_role("button", name="Continue").click()
 
                     # See if we got to the summary page
-                    self.page.wait_for_url(
+                    await self.page.wait_for_url(
                         "https://digital.fidelity.com/ftgw/digital/portfolio/summary",
                         timeout=5000,
                     )
@@ -182,7 +230,7 @@ class FidelityAutomation:
                     return (True, True)
 
                 # If the authenticator code is the only way but we don't have the secret, return error
-                if self.page.get_by_text(
+                if await self.page.get_by_text(
                     "Enter the code from your authenticator app This security code will confirm the"
                 ).is_visible():
                     raise Exception(
@@ -190,12 +238,14 @@ class FidelityAutomation:
                     )
 
                 # If the app push notification page is present
-                if self.page.get_by_role("link", name="Try another way").is_visible():
-                    self.page.locator("label").filter(
+                if await self.page.get_by_role(
+                    "link", name="Try another way"
+                ).is_visible():
+                    await self.page.locator("label").filter(
                         has_text="Don't ask me again on this"
                     ).check()
                     if (
-                        not self.page.locator("label")
+                        not await self.page.locator("label")
                         .filter(has_text="Don't ask me again on this")
                         .is_checked()
                     ):
@@ -204,11 +254,11 @@ class FidelityAutomation:
                         )
 
                     # Click on alternate verification method to get OTP via text
-                    self.page.get_by_role("link", name="Try another way").click()
+                    await self.page.get_by_role("link", name="Try another way").click()
 
                 # Press the Text me button
-                self.page.get_by_role("button", name="Text me the code").click()
-                self.page.get_by_placeholder("XXXXXX").click()
+                await self.page.get_by_role("button", name="Text me the code").click()
+                await self.page.get_by_placeholder("XXXXXX").click()
 
                 return (True, False)
 
@@ -217,13 +267,14 @@ class FidelityAutomation:
 
         except PlaywrightTimeoutError:
             print("Timeout waiting for login page to load or navigate.")
+            print(traceback.format_exc())
             return (False, False)
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             traceback.print_exc()
             return (False, False)
 
-    def login_2FA(self, code):
+    async def login_2FA(self, code):
         """
         Completes the 2FA portion of the login using a phone text code.
 
@@ -232,21 +283,21 @@ class FidelityAutomation:
             False: bool: If login failed, return false.
         """
         try:
-            self.page.get_by_placeholder("XXXXXX").fill(code)
+            await self.page.get_by_placeholder("XXXXXX").fill(code)
 
             # Prevent future OTP requirements
-            self.page.locator("label").filter(
+            await self.page.locator("label").filter(
                 has_text="Don't ask me again on this"
             ).check()
             if (
-                not self.page.locator("label")
+                not await self.page.locator("label")
                 .filter(has_text="Don't ask me again on this")
                 .is_checked()
             ):
                 raise Exception("Cannot check 'Don't ask me again on this device' box")
-            self.page.get_by_role("button", name="Submit").click()
+            await self.page.get_by_role("button", name="Submit").click()
 
-            self.page.wait_for_url(
+            await self.page.wait_for_url(
                 "https://digital.fidelity.com/ftgw/digital/portfolio/summary",
                 timeout=5000,
             )
@@ -260,7 +311,7 @@ class FidelityAutomation:
             traceback.print_exc()
             return False
 
-    def getAccountInfo(self):
+    async def getAccountInfo(self):
         """
         Gets account numbers, account names, and account totals by downloading the csv of positions from fidelity.
 
@@ -277,11 +328,13 @@ class FidelityAutomation:
                 'value': str: The total value of the position
         """
         # Go to positions page
-        self.page.goto("https://digital.fidelity.com/ftgw/digital/portfolio/positions")
+        await self.page.goto(
+            "https://digital.fidelity.com/ftgw/digital/portfolio/positions"
+        )
 
         # Download the positions as a csv
-        with self.page.expect_download() as download_info:
-            self.page.get_by_label("Download Positions").click()
+        with await self.page.expect_download() as download_info:
+            await self.page.get_by_label("Download Positions").click()
         download = download_info.value
         cur = os.getcwd()
         positions_csv = os.path.join(cur, download.suggested_filename)
@@ -375,7 +428,7 @@ class FidelityAutomation:
 
         return self.account_dict
 
-    def summary_holdings(self) -> dict:
+    async def summary_holdings(self) -> dict:
         """
         NOTE: The getAccountInfo function MUST be called before this, otherwise an empty dictionary will be returned
         Returns a dictionary containing dictionaries for each stock owned across all accounts.
@@ -411,7 +464,7 @@ class FidelityAutomation:
             summary += f"{stock}: {round(st_dict['quantity'], 2)} @ {st_dict['last_price']} = {round(st_dict['value'], 2)}\n"
         return unique_stocks
 
-    def transaction(
+    async def transaction(
         self, stock: str, quantity: float, action: str, account: str, dry: bool = True
     ) -> bool:
         """
@@ -441,48 +494,52 @@ class FidelityAutomation:
                 self.page.url
                 != "https://digital.fidelity.com/ftgw/digital/trade-equity/index/orderEntry"
             ):
-                self.page.goto(
+                await self.page.goto(
                     "https://digital.fidelity.com/ftgw/digital/trade-equity/index/orderEntry"
                 )
 
             # Click on the drop down
-            self.page.query_selector("#dest-acct-dropdown").click()
+            await self.page.query_selector("#dest-acct-dropdown").click()
 
             if (
-                not self.page.get_by_role("option")
+                not await self.page.get_by_role("option")
                 .filter(has_text=account.upper())
                 .is_visible()
             ):
                 # Reload the page and hit the drop down again
                 # This is to prevent a rare case where the drop down is empty
                 print("Reloading...")
-                self.page.reload()
+                await self.page.reload()
                 # Click on the drop down
-                self.page.query_selector("#dest-acct-dropdown").click()
+                await self.page.query_selector("#dest-acct-dropdown").click()
             # Find the account to trade under
-            self.page.get_by_role("option").filter(has_text=account.upper()).click()
+            await self.page.get_by_role("option").filter(
+                has_text=account.upper()
+            ).click()
 
             # Enter the symbol
-            self.page.get_by_label("Symbol").click()
+            await self.page.get_by_label("Symbol").click()
             # Fill in the ticker
-            self.page.get_by_label("Symbol").fill(stock)
+            await self.page.get_by_label("Symbol").fill(stock)
             # Find the symbol we wanted and click it
-            self.page.get_by_label("Symbol").press("Enter")
+            await self.page.get_by_label("Symbol").press("Enter")
 
             # Wait for quote panel to show up
-            self.page.locator("#quote-panel").wait_for(timeout=2000)
-            last_price = self.page.query_selector(
+            await self.page.locator("#quote-panel").wait_for(timeout=2000)
+            last_price = await self.page.query_selector(
                 "#eq-ticket__last-price > span.last-price"
             ).text_content()
             last_price = last_price.replace("$", "")
 
             # Ensure we are in the expanded ticket
-            if self.page.get_by_role(
+            if await self.page.get_by_role(
                 "button", name="View expanded ticket"
             ).is_visible():
-                self.page.get_by_role("button", name="View expanded ticket").click()
+                await self.page.get_by_role(
+                    "button", name="View expanded ticket"
+                ).click()
                 # Wait for it to take effect
-                self.page.get_by_role("button", name="Calculate shares").wait_for(
+                await self.page.get_by_role("button", name="Calculate shares").wait_for(
                     timeout=2000
                 )
 
@@ -490,30 +547,30 @@ class FidelityAutomation:
             extended = False
             precision = 3
             # Enable extended hours trading if available
-            if self.page.get_by_text("Extended hours trading").is_visible():
-                if self.page.get_by_text(
+            if await self.page.get_by_text("Extended hours trading").is_visible():
+                if await self.page.get_by_text(
                     "Extended hours trading: OffUntil 8:00 PM ET"
                 ).is_visible():
-                    self.page.get_by_text(
+                    await self.page.get_by_text(
                         "Extended hours trading: OffUntil 8:00 PM ET"
                     ).check()
                 extended = True
                 precision = 2
 
             # Press the buy or sell button. Title capitalizes the first letter so 'buy' -> 'Buy'
-            self.page.query_selector(".eq-ticket-action-label").click()
-            self.page.get_by_role(
+            await self.page.query_selector(".eq-ticket-action-label").click()
+            await self.page.get_by_role(
                 "option", name=action.lower().title(), exact=True
             ).wait_for()
-            self.page.get_by_role(
+            await self.page.get_by_role(
                 "option", name=action.lower().title(), exact=True
             ).click()
 
             # Press the shares text box
-            self.page.locator("#eqt-mts-stock-quatity div").filter(
+            await self.page.locator("#eqt-mts-stock-quatity div").filter(
                 has_text="Quantity"
             ).click()
-            self.page.get_by_text("Quantity", exact=True).fill(str(quantity))
+            await self.page.get_by_text("Quantity", exact=True).fill(str(quantity))
 
             # If it should be limit
             if float(last_price) < 1 or extended:
@@ -531,25 +588,25 @@ class FidelityAutomation:
                     )
 
                 # Click on the limit default option when in extended hours
-                self.page.query_selector(
+                await self.page.query_selector(
                     "#dest-dropdownlist-button-ordertype > span:nth-child(1)"
                 ).click()
-                self.page.get_by_role("option", name="Limit", exact=True).click()
+                await self.page.get_by_role("option", name="Limit", exact=True).click()
                 # Enter the limit price
-                self.page.get_by_text("Limit price", exact=True).click()
-                self.page.get_by_label("Limit price").fill(str(wanted_price))
+                await self.page.get_by_text("Limit price", exact=True).click()
+                await self.page.get_by_label("Limit price").fill(str(wanted_price))
             # Otherwise its market
             else:
                 # Click on the market
-                self.page.locator("#order-type-container-id").click()
-                self.page.get_by_role("option", name="Market", exact=True).click()
+                await self.page.locator("#order-type-container-id").click()
+                await self.page.get_by_role("option", name="Market", exact=True).click()
 
             # Continue with the order
-            self.page.get_by_role("button", name="Preview order").click()
+            await self.page.get_by_role("button", name="Preview order").click()
 
             # If error occurred
             try:
-                self.page.get_by_role(
+                await self.page.get_by_role(
                     "button", name="Place order clicking this"
                 ).wait_for(timeout=4000, state="visible")
             except PlaywrightTimeoutError:
@@ -559,21 +616,23 @@ class FidelityAutomation:
                 filtered_error = ""
                 try:
                     error_message = (
-                        self.page.get_by_label("Error")
+                        await self.page.get_by_label("Error")
                         .locator("div")
                         .filter(has_text="critical")
                         .nth(2)
                         .text_content(timeout=2000)
                     )
-                    self.page.get_by_role("button", name="Close dialog").click()
+                    await self.page.get_by_role("button", name="Close dialog").click()
                 except Exception:
                     pass
                 if error_message == "":
                     try:
-                        error_message = self.page.wait_for_selector(
+                        error_message = await self.page.wait_for_selector(
                             '.pvd-inline-alert__content font[color="red"]', timeout=2000
                         ).text_content()
-                        self.page.get_by_role("button", name="Close dialog").click()
+                        await self.page.get_by_role(
+                            "button", name="Close dialog"
+                        ).click()
                     except Exception:
                         pass
                 # Return with error and trim it down (it contains many spaces for some reason)
@@ -594,27 +653,27 @@ class FidelityAutomation:
 
             # If no error occurred, continue with checking the order preview
             if (
-                not self.page.locator("preview")
+                not await self.page.locator("preview")
                 .filter(has_text=account.upper())
                 .is_visible()
-                or not self.page.get_by_text(
+                or not await self.page.get_by_text(
                     f"Symbol{stock.upper()}", exact=True
                 ).is_visible()
-                or not self.page.get_by_text(
+                or not await self.page.get_by_text(
                     f"Action{action.lower().title()}"
                 ).is_visible()
-                or not self.page.get_by_text(f"Quantity{quantity}").is_visible()
+                or not await self.page.get_by_text(f"Quantity{quantity}").is_visible()
             ):
                 return (False, "Order preview is not what is expected")
 
             # If its a real run
             if not dry:
-                self.page.get_by_role(
+                await self.page.get_by_role(
                     "button", name="Place order clicking this"
                 ).click()
                 try:
                     # See that the order goes through
-                    self.page.get_by_text("Order received").wait_for(
+                    await self.page.get_by_text("Order received").wait_for(
                         timeout=5000, state="visible"
                     )
                     # If no error, return with success
@@ -640,6 +699,7 @@ async def fidelity_run(
     Returns:
         None
     """
+
     # Initialize .env file
     load_dotenv()
     EXTERNAL_CREDENTIALS = None
@@ -679,10 +739,16 @@ async def fidelity_run(
             # Store the Brokerage object for fidelity under 'fidelity' in the orderObj
             orderObj.set_logged_in(fidelityobj, "fidelity")
             if second_command == "_holdings":
-                fidelity_holdings(fidelityobj, name, loop=loop)
+                await fidelity_holdings(
+                    fidelityobj,
+                    name,
+                    loop=loop,
+                    API_METADATA=API_METADATA,
+                    botObj=botObj,
+                )
             # Only other option is _transaction
             else:
-                fidelity_transaction(fidelityobj, name, orderObj, loop=loop)
+                await fidelity_transaction(fidelityobj, name, orderObj, loop=loop)
     return None
 
 
@@ -706,6 +772,7 @@ async def fidelity_init(
 
     # Create brokerage class object and call it Fidelity
     fidelity_obj = Brokerage("Fidelity")
+    fidelity_browser = None
 
     try:
         # Split the login into into separate items
@@ -714,15 +781,20 @@ async def fidelity_init(
         fidelity_browser = FidelityAutomation(
             headless=headless, title=name, profile_path="./creds"
         )
-
+        try:
+            await fidelity_browser.initialize()
+        except Exception as e:
+            print(f"Error initializing Fidelity browser: {e}")
+            print(traceback.format_exc())
+            return None
         # Log into fidelity
-        step_1, step_2 = fidelity_browser.login(
-            account[0], account[1], account[2] if len(account) > 2 else None
-        )
+        totp = account[2] if len(account) > 2 else None
+        step_1, step_2 = await fidelity_browser.login(account[0], account[1], totp)
         # If 2FA is present, ask for code
         if step_1 and not step_2:
+            print("requesting code")
             if botObj is None and loop is None:
-                fidelity_browser.login_2FA(input("Enter code: "))
+                await fidelity_browser.login_2FA(input("Enter code: "))
             else:
                 timeout = 300  # 5 minutes
                 # Should wait for 60 seconds before timeout
@@ -739,7 +811,7 @@ async def fidelity_init(
                 )
                 if sms_code is None:
                     raise Exception(f"{name} No SMS code found", loop)
-                fidelity_browser.login_2FA(sms_code)
+                await fidelity_browser.login_2FA(sms_code)
         elif not step_1:
             raise Exception(
                 f"{name}: Login Failed. Got Error Page: Current URL: {fidelity_browser.page.url}"
@@ -749,7 +821,7 @@ async def fidelity_init(
         fidelity_obj.set_logged_in_object(name, fidelity_browser)
 
         # Getting account numbers, names, and balances
-        account_dict = fidelity_browser.getAccountInfo()
+        account_dict = await fidelity_browser.getAccountInfo()
 
         if account_dict is None:
             raise Exception(f"{name}: Error getting account info")
@@ -767,10 +839,16 @@ async def fidelity_init(
         return None
     finally:
         if fidelity_browser is not None:
-            fidelity_browser.close_browser()
+            await fidelity_browser.close_browser()
 
 
-async def fidelity_holdings(fidelity_o: Brokerage, name: str, loop=None):
+async def fidelity_holdings(
+    fidelity_o: Brokerage,
+    name: str,
+    loop=None,
+    API_METADATA=None,
+    botObj=None,
+):
     """
     Retrieves the holdings per account by reading from the previously downloaded positions csv file.
     Prints holdings for each account and provides a summary if the user has more than 5 accounts.
@@ -787,7 +865,9 @@ async def fidelity_holdings(fidelity_o: Brokerage, name: str, loop=None):
 
     # Get the browser back from the fidelity object
     try:
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
         fidelity_browser: FidelityAutomation = fidelity_o.get_logged_in_objects(name)
+        
         account_dict = fidelity_browser.account_dict
         for account_number in account_dict:
 
@@ -802,17 +882,17 @@ async def fidelity_holdings(fidelity_o: Brokerage, name: str, loop=None):
                 )
 
         # Print to console and to discord
-        await printHoldings(fidelity_o, loop)
+        await printHoldings(botObj, CURRENT_USER_ID, fidelity_o, loop, False)
     except Exception as e:
         # printAndDiscord(f"{name}: Error getting holdings: {e}", loop)
         print(traceback.format_exc())
         return None
     finally:
         if fidelity_browser is not None:
-            fidelity_browser.close_browser()
+            await fidelity_browser.close_browser()
 
 
-def fidelity_transaction(
+async def fidelity_transaction(
     fidelity_o: Brokerage, name: str, orderObj: stockOrder, loop=None
 ):
     """
@@ -840,10 +920,10 @@ def fidelity_transaction(
                 loop,
             )
             # Reload the page incase we were trading before
-            fidelity_browser.page.reload()
+            await fidelity_browser.page.reload()
             for account_number in fidelity_o.get_account_numbers(name):
                 # Go trade for all accounts for that stock
-                success, error_message = fidelity_browser.transaction(
+                success, error_message = await fidelity_browser.transaction(
                     stock,
                     orderObj.get_amount(),
                     orderObj.get_action(),
@@ -874,4 +954,4 @@ def fidelity_transaction(
         return None
     finally:
         if fidelity_browser is not None:
-            fidelity_browser.close_browser()
+            await fidelity_browser.close_browser()
