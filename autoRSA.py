@@ -135,8 +135,9 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
         try:
             async with botObj.db.execute("SELECT 1") as cursor:
                 await cursor.fetchone()
-        except (ValueError, aiosqlite.Error):
+        except (ValueError, aiosqlite.Error, Exception):
             print("Reconnecting to the database...")
+            print(traceback.format_exc())
             botObj.db = await aiosqlite.connect(DATABASE_NAME)
 
         return botObj.db
@@ -161,10 +162,11 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                         FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
                     ) as cursor:
                         encrypted_credentials = await cursor.fetchone()
-                except aiosqlite.Error:
+                except Exception:
                     print(
                         f"Database error when fetching credentials for {broker}. Reconnecting..."
                     )
+                    print(traceback.format_exc())
                     db = await ensure_db_connection()
                     async with db.execute(
                         FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
