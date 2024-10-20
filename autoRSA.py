@@ -151,7 +151,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             return
         for broker in order_brokers:
             # robin hood is currently unavailable
-            if broker == "robinhood" or broker == "fidelity":
+            if broker == "robinhood":
                 # printAndDiscord(f"Robinhood is currently unavailable", loop)
                 continue
             if broker in orderObj.get_notbrokers():
