@@ -129,6 +129,21 @@ def decrypt_credential(encrypted_credential: str) -> str:
 # broker name + type of function
 async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
     if command in [("_init", "_holdings"), ("_init", "_transaction")]:
+        try:
+            if not botObj or not hasattr(botObj, "db") or botObj.db is None:
+                botObj.db = await aiosqlite.connect(DATABASE_NAME)
+            
+            db = botObj.db
+
+            # Check if the connection is active
+            async with db.execute("SELECT 1") as cursor:
+                await cursor.fetchone()
+
+        except (ValueError, aiosqlite.Error) as e:
+            print(f"Database connection error: {e}")
+            # Optionally, try to reconnect here
+            botObj.db = await aiosqlite.connect(DATABASE_NAME)
+
         order_brokers = orderObj.get_brokers()
         if len(order_brokers) == 0:
             printAndDiscord(f"<@{author_id}> No brokers to run", loop)
@@ -141,29 +156,11 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             if broker in orderObj.get_notbrokers():
                 continue
 
-            # Use the bot's database connection
-            if botObj and hasattr(botObj, "db"):
-                db = botObj.db
-            else:
-                # Fallback to creating a new connection if bot object is not available
-                db = await aiosqlite.connect(DATABASE_NAME)
-
             async with db.execute(
                 FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
             ) as cursor:
                 encrypted_credentials = await cursor.fetchone()
             if not encrypted_credentials:
-                # print(
-                #     f"{broker} account does not exist for user with id {author_id}, skipping..."
-                # )
-                # try:
-                #     user = await botObj.fetch_user(author_id)
-                #     if not user:
-                #         raise ValueError(f"Could not find user with ID {author_id}")
-                #     await user.send(f"<@{author_id}> you have not registered an account for {broker}. Please do that in the bot's DM")
-                # except Exception as e:
-                #     printAndDiscord(str(e), loop)
-
                 continue
 
             decrypted_credentials = decrypt_credential(encrypted_credentials[0])
