@@ -128,128 +128,145 @@ def decrypt_credential(encrypted_credential: str) -> str:
 # Runs the specified function for each broker in the list
 # broker name + type of function
 async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=None):
+    async def ensure_db_connection():
+        if not botObj or not hasattr(botObj, "db") or botObj.db is None:
+            botObj.db = await aiosqlite.connect(DATABASE_NAME)
+
+        try:
+            async with botObj.db.execute("SELECT 1") as cursor:
+                await cursor.fetchone()
+        except (ValueError, aiosqlite.Error):
+            print("Reconnecting to the database...")
+            botObj.db = await aiosqlite.connect(DATABASE_NAME)
+
+        return botObj.db
+
     if command in [("_init", "_holdings"), ("_init", "_transaction")]:
         try:
-            if not botObj or not hasattr(botObj, "db") or botObj.db is None:
-                botObj.db = await aiosqlite.connect(DATABASE_NAME)
-            
-            db = botObj.db
+            db = await ensure_db_connection()
 
-            # Check if the connection is active
-            async with db.execute("SELECT 1") as cursor:
-                await cursor.fetchone()
+            order_brokers = orderObj.get_brokers()
+            if len(order_brokers) == 0:
+                printAndDiscord(f"<@{author_id}> No brokers to run", loop)
+                return
 
-        except (ValueError, aiosqlite.Error) as e:
-            print(f"Database connection error: {e}")
-            # Optionally, try to reconnect here
-            botObj.db = await aiosqlite.connect(DATABASE_NAME)
-            db = botObj.db
+            for broker in order_brokers:
+                if broker == "robinhood":
+                    continue
+                if broker in orderObj.get_notbrokers():
+                    continue
 
-        order_brokers = orderObj.get_brokers()
-        if len(order_brokers) == 0:
-            printAndDiscord(f"<@{author_id}> No brokers to run", loop)
-            return
-        for broker in order_brokers:
-            # robin hood is currently unavailable
-            if broker == "robinhood":
-                # printAndDiscord(f"Robinhood is currently unavailable", loop)
-                continue
-            if broker in orderObj.get_notbrokers():
-                continue
-
-            async with db.execute(
-                FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
-            ) as cursor:
-                encrypted_credentials = await cursor.fetchone()
-            if not encrypted_credentials:
-                continue
-
-            decrypted_credentials = decrypt_credential(encrypted_credentials[0])
-            API_METADATA = {
-                "EXTERNAL_CREDENTIALS": decrypted_credentials,
-                "CURRENT_USER_ID": author_id,
-            }
-
-            broker = nicknames(broker)
-            init_command, second_command = command
-            try:
-                # Initialize broker
-                fun_name = broker + init_command
-                if broker.lower() in ["fennel", "firstrade", "public"]:
-                    # Requires bot object and loop
-                    result = await globals()[fun_name](
-                        API_METADATA=API_METADATA,
-                        botObj=botObj,
-                        loop=loop,
+                try:
+                    async with db.execute(
+                        FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
+                    ) as cursor:
+                        encrypted_credentials = await cursor.fetchone()
+                except aiosqlite.Error:
+                    print(
+                        f"Database error when fetching credentials for {broker}. Reconnecting..."
                     )
-                    orderObj.set_logged_in(result, broker)
-                elif broker.lower() in ["chase", "fidelity", "vanguard"]:
-                    fun_name = broker + "_run"
+                    db = await ensure_db_connection()
+                    async with db.execute(
+                        FIND_ONE_BROKER_CREDENTIALS_FOR_USER, (str(author_id), broker)
+                    ) as cursor:
+                        encrypted_credentials = await cursor.fetchone()
 
-                    # Playwright brokers have to run all transactions with one function
-                    coroutine = globals()[fun_name](
-                        orderObj=orderObj,
-                        command=command,
-                        botObj=botObj,
-                        loop=loop,
-                        API_METADATA=API_METADATA,
-                    )
+                if not encrypted_credentials:
+                    continue
 
-                    # Run the coroutine in the main event loop
-                    future = asyncio.run_coroutine_threadsafe(coroutine, loop)
-                    try:
-                        result = (
-                            future.result()
-                        )  # This will block until the coroutine completes
-                        if result is None:
-                            raise RuntimeError(
-                                f"Error in {fun_name}: Function did not complete successfully."
-                            )
-                    except Exception as err:
-                        raise RuntimeError(f"Error in {fun_name}: {err}")
-                elif broker.lower() == "schwab":
-                    orderObj.set_logged_in(
-                        await globals()[fun_name](API_METADATA=API_METADATA), broker
-                    )
-                else:
-                    orderObj.set_logged_in(
-                        globals()[fun_name](API_METADATA=API_METADATA), broker
-                    )
+                decrypted_credentials = decrypt_credential(encrypted_credentials[0])
+                API_METADATA = {
+                    "EXTERNAL_CREDENTIALS": decrypted_credentials,
+                    "CURRENT_USER_ID": author_id,
+                }
 
-                print()
-                if broker.lower() not in ["chase", "vanguard"]:
-                    # Verify broker is logged in
-                    orderObj.order_validate(preLogin=False)
-                    logged_in_broker = orderObj.get_logged_in(broker)
-                    if logged_in_broker is None:
-                        print(f"Error: {broker} not logged in, skipping...")
-                        continue
-                    # Get holdings or complete transaction
-                    if second_command == "_holdings":
-                        fun_name = broker + second_command
-                        await globals()[fun_name](
-                            logged_in_broker,
-                            loop,
+                broker = nicknames(broker)
+                init_command, second_command = command
+                try:
+                    # Initialize broker
+                    fun_name = broker + init_command
+                    if broker.lower() in ["fennel", "firstrade", "public"]:
+                        # Requires bot object and loop
+                        result = await globals()[fun_name](
                             API_METADATA=API_METADATA,
                             botObj=botObj,
+                            loop=loop,
                         )
-                    elif second_command == "_transaction":
-                        fun_name = broker + second_command
-                        globals()[fun_name](
-                            logged_in_broker,
-                            orderObj,
-                            loop,
+                        orderObj.set_logged_in(result, broker)
+                    elif broker.lower() in ["chase", "fidelity", "vanguard"]:
+                        fun_name = broker + "_run"
+
+                        # Playwright brokers have to run all transactions with one function
+                        coroutine = globals()[fun_name](
+                            orderObj=orderObj,
+                            command=command,
+                            botObj=botObj,
+                            loop=loop,
+                            API_METADATA=API_METADATA,
                         )
-                        printAndDiscord(
-                            f"All {broker.capitalize()} transactions complete",
-                            loop,
+
+                        # Run the coroutine in the main event loop
+                        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
+                        try:
+                            result = (
+                                future.result()
+                            )  # This will block until the coroutine completes
+                            if result is None:
+                                raise RuntimeError(
+                                    f"Error in {fun_name}: Function did not complete successfully."
+                                )
+                        except Exception as err:
+                            raise RuntimeError(f"Error in {fun_name}: {err}")
+                    elif broker.lower() == "schwab":
+                        orderObj.set_logged_in(
+                            await globals()[fun_name](API_METADATA=API_METADATA), broker
                         )
-            except Exception as ex:
-                print(traceback.format_exc())
-                print(f"Error in {fun_name} with {broker}: {ex}")
-                print(orderObj)
-            print()
-        printAndDiscord("All commands complete in all registered brokers", loop)
+                    else:
+                        orderObj.set_logged_in(
+                            globals()[fun_name](API_METADATA=API_METADATA), broker
+                        )
+
+                    print()
+                    if broker.lower() not in ["chase", "vanguard"]:
+                        # Verify broker is logged in
+                        orderObj.order_validate(preLogin=False)
+                        logged_in_broker = orderObj.get_logged_in(broker)
+                        if logged_in_broker is None:
+                            print(f"Error: {broker} not logged in, skipping...")
+                            continue
+                        # Get holdings or complete transaction
+                        if second_command == "_holdings":
+                            fun_name = broker + second_command
+                            await globals()[fun_name](
+                                logged_in_broker,
+                                loop,
+                                API_METADATA=API_METADATA,
+                                botObj=botObj,
+                            )
+                        elif second_command == "_transaction":
+                            fun_name = broker + second_command
+                            globals()[fun_name](
+                                logged_in_broker,
+                                orderObj,
+                                loop,
+                            )
+                            printAndDiscord(
+                                f"All {broker.capitalize()} transactions complete",
+                                loop,
+                            )
+                except Exception as ex:
+                    print(traceback.format_exc())
+                    print(f"Error in {fun_name} with {broker}: {ex}")
+                    print(orderObj)
+                print()
+            printAndDiscord("All commands complete in all registered brokers", loop)
+        except Exception as ex:
+            print(traceback.format_exc())
+            print(f"Error in fun_run: {ex}")
+            print(orderObj)
+        finally:
+            if botObj and hasattr(botObj, "db") and botObj.db:
+                await botObj.db.close()
     else:
         print(f"Error: {command} is not a valid command")
 
