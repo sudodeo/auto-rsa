@@ -70,7 +70,7 @@ class FidelityAutomation:
 
             # Launch the browser
             self.browser = await self.playwright.firefox.launch(
-                headless=False,  # self.headless,
+                headless=self.headless,
                 args=["--disable-webgl", "--disable-software-rasterizer"],
             )
 
