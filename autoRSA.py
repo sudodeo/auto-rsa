@@ -143,6 +143,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
             print(f"Database connection error: {e}")
             # Optionally, try to reconnect here
             botObj.db = await aiosqlite.connect(DATABASE_NAME)
+            db = botObj.db
 
         order_brokers = orderObj.get_brokers()
         if len(order_brokers) == 0:
