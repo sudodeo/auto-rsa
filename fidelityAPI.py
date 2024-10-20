@@ -335,7 +335,7 @@ class FidelityAutomation:
         # Download the positions as a csv
         async with self.page.expect_download() as download_info:
             await self.page.get_by_label("Download Positions").click()
-        download = download_info.value
+        download = await download_info.value
         cur = os.getcwd()
         positions_csv = os.path.join(cur, download.suggested_filename)
         # Create a copy to work on with the proper file name known
