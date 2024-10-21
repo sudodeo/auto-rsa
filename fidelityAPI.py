@@ -89,40 +89,6 @@ class FidelityAutomation:
                 await self.playwright.stop()
             raise
 
-    async def getDriver(self):
-        """
-        Initializes the playwright webdriver for use in subsequent functions.
-        Creates and applies stealth settings to playwright context wrapper.
-        """
-        # Set the context wrapper
-        self.playwright = await async_playwright().start()
-
-        # Create or load cookies
-        self.profile_path = os.path.abspath(self.profile_path)
-        if self.title is not None:
-            self.profile_path = os.path.join(
-                self.profile_path, f"Fidelity_{self.title}.json"
-            )
-        else:
-            self.profile_path = os.path.join(self.profile_path, "Fidelity.json")
-        if not os.path.exists(self.profile_path):
-            os.makedirs(os.path.dirname(self.profile_path), exist_ok=True)
-            with open(self.profile_path, "w") as f:
-                json.dump({}, f)
-
-        # Launch the browser
-        self.browser = await self.playwright.firefox.launch(
-            headless=False,  # self.headless,
-            args=["--disable-webgl", "--disable-software-rasterizer"],
-        )
-
-        self.context = await self.browser.new_context(
-            storage_state=self.profile_path if self.title is not None else None
-        )
-        self.page = await self.context.new_page()
-        # Apply stealth settings
-        await stealth_async(self.page, self.stealth_config)
-
     async def save_storage_state(self):
         """
         Saves the storage state of the browser to a file.
@@ -607,7 +573,7 @@ class FidelityAutomation:
             # If error occurred
             try:
                 await self.page.get_by_role(
-                    "button", name="Place order clicking this"
+                    "button", name="Place order"
                 ).wait_for(timeout=4000, state="visible")
             except PlaywrightTimeoutError:
                 # Error must be present (or really slow page for some reason)
@@ -669,7 +635,7 @@ class FidelityAutomation:
             # If its a real run
             if not dry:
                 await self.page.get_by_role(
-                    "button", name="Place order clicking this"
+                    "button", name="Place order"
                 ).click()
                 try:
                     # See that the order goes through
