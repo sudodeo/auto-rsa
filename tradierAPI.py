@@ -231,6 +231,11 @@ def tradier_transaction(tradier_o: Brokerage, orderObj: stockOrder, loop=None):
                             loop=loop,
                         )
                     except Exception as e:
+                        if json_response:
+                            errors = ". ".join(
+                                json_response.get("errors", {}).get("error", [])
+                            )
+                            e = errors
                         printAndDiscord(
                             f"Tradier account {print_account} Error: {e}", loop=loop
                         )
