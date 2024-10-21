@@ -411,6 +411,7 @@ async def main():
         RSA_BOT_ROLE_ID = int(os.getenv("RSA_BOT_ROLE_ID"))
         RSA_MENTEE_ROLE_ID = int(os.getenv("RSA_MENTEE_ROLE_ID"))
         RSAUTOMATION_ROLE_ID = int(os.getenv("RSAUTOMATION_ROLE_ID"))
+        HELP_CHANNEL_ID = int(os.getenv("HELP_CHANNEL_ID"))
 
         RSA_ADMIN_ROLE_ID = int(os.getenv("RSA_ADMIN_ROLE_ID"))
         # Initialize discord bot
@@ -490,9 +491,9 @@ async def main():
         async def helprsa(ctx):
             # String of available commands
             await ctx.send(
-                """
+                f"""
 eMoney RSA Bot:
-Refer to this channel to get info on how to use the **RSA bot:** <#1280202509247320165>
+Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL_ID}>
                 """
             )
 
