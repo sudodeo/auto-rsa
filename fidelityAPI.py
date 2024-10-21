@@ -70,7 +70,7 @@ class FidelityAutomation:
 
             # Launch the browser
             self.browser = await self.playwright.firefox.launch(
-                headless=False,  # self.headless,
+                headless=self.headless,
                 args=["--disable-webgl", "--disable-software-rasterizer"],
             )
 
@@ -886,9 +886,6 @@ async def fidelity_holdings(
         # printAndDiscord(f"{name}: Error getting holdings: {e}", loop)
         print(traceback.format_exc())
         return None
-    finally:
-        if fidelity_browser is not None:
-            await fidelity_browser.close_browser()
 
 
 async def fidelity_transaction(
@@ -951,6 +948,3 @@ async def fidelity_transaction(
         # printAndDiscord(f"{name}: Error trading: {e}", loop)
         print(traceback.format_exc())
         return None
-    finally:
-        if fidelity_browser is not None:
-            await fidelity_browser.close_browser()
