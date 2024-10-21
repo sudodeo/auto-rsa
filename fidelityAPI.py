@@ -311,7 +311,7 @@ class FidelityAutomation:
             traceback.print_exc()
             return False
 
-    async def getAccountInfo(self):
+    async def getAccountInfo(self,user_id):
         """
         Gets account numbers, account names, and account totals by downloading the csv of positions from fidelity.
 
@@ -337,9 +337,9 @@ class FidelityAutomation:
             await self.page.get_by_label("Download Positions").click()
         download = await download_info.value
         cur = os.getcwd()
-        positions_csv = os.path.join(cur, download.suggested_filename)
+        positions_csv = os.path.join(cur, download.suggested_filename+"--"+user_id)
         # Create a copy to work on with the proper file name known
-        download.save_as(positions_csv)
+        await download.save_as(positions_csv)
 
         csv_file = open(positions_csv, newline="", encoding="utf-8-sig")
 
@@ -820,7 +820,7 @@ async def fidelity_init(
         fidelity_obj.set_logged_in_object(name, fidelity_browser)
 
         # Getting account numbers, names, and balances
-        account_dict = await fidelity_browser.getAccountInfo()
+        account_dict = await fidelity_browser.getAccountInfo(name)
 
         if account_dict is None:
             raise Exception(f"{name}: Error getting account info")
