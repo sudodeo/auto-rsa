@@ -4,6 +4,7 @@
 
 import asyncio
 import os
+import pickle
 import subprocess
 import sys
 import textwrap
@@ -13,20 +14,19 @@ from queue import Queue
 from threading import Thread
 from time import sleep
 
-import discord
 import pkg_resources
 import requests
 from discord.ext import commands
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromiumService
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium_stealth import stealth
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 DISCORD_CHANNEL = os.getenv("DISCORD_CHANNEL")
-HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
+HEADLESS = os.getenv("HEADLESS", "true").lower() != "false"
+SORT_BROKERS = os.getenv("SORT_BROKERS", "true").lower() != "false"
 
 # Create task queue
 task_queue = Queue()
@@ -60,7 +60,7 @@ class stockOrder:
 
     def set_stock(self, stock: str) -> None | ValueError:
         # Only allow strings for now
-        if not isinstance(stock, str):
+        if not isinstance(stock, str) or stock == "":
             raise ValueError("Stock must be a string")
         self.__stock.append(stock.upper())
 
@@ -155,9 +155,10 @@ class stockOrder:
         self.__notbrokers = list(dict.fromkeys(self.__notbrokers))
 
     def alphabetize(self):
-        self.__stock.sort()
-        self.__brokers.sort()
-        self.__notbrokers.sort()
+        if SORT_BROKERS:
+            self.__stock.sort()
+            self.__brokers.sort()
+            self.__notbrokers.sort()
 
     def order_validate(self, preLogin=False) -> None | ValueError:
         # Check for required fields (doesn't apply to holdings)
@@ -232,11 +233,13 @@ class Brokerage:
         parent_name: str,
         account_name: str,
         stock: str,
-        quantity: float,
-        price: float,
+        quantity: float | str,
+        price: float | str,
     ):
-        quantity = 0 if quantity == "N/A" else quantity
-        price = 0 if price == "N/A" else price
+        if isinstance(quantity, str) and quantity.lower() == "n/a":
+            quantity = 0
+        if isinstance(price, str) and price.lower() == "n/a":
+            price = 0
         if parent_name not in self.__holdings:
             self.__holdings[parent_name] = {}
         if account_name not in self.__holdings[parent_name]:
@@ -352,17 +355,28 @@ def is_up_to_date(remote, branch):
     try:
         g = git.cmd.Git()
         ls_remote = g.ls_remote(remote, branch)
-        remote_hash = str(ls_remote.split("\t")[0])
+        remote_hash = ls_remote.split("\n")
+        wanted_remote = f"refs/heads/{branch}"
+        for line in remote_hash:
+            if wanted_remote in line:
+                remote_hash = line.split("\t")[0]
+                break
+        if isinstance(remote_hash, list):
+            remote_hash = ""
+            is_fork = True
+            raise Exception(
+                f"Branch {branch} not found in remote {remote}. Perhaps you are on a fork?"
+            )
         if local_commit == remote_hash:
             up_to_date = True
             print(f"You are up to date with {remote}/{branch}")
     except Exception as e:
         print(f"Error running ls-remote: {e}")
-    if not up_to_date:
+    if not up_to_date and not is_fork:
         if remote_hash == "":
             remote_hash = "NOT FOUND"
         print(
-            f"WARNING: YOU ARE OUT OF DATE. Please run 'git pull {remote} {branch}' to update. Local hash: {local_commit}, Remote hash: {remote_hash}"
+            f"WARNING: YOU ARE OUT OF DATE. Please run 'git pull' to update from {remote}/{branch}. Local hash: {local_commit}, Remote hash: {remote_hash}"
         )
     return up_to_date
 
@@ -410,7 +424,7 @@ def updater():
         return
     if not repo.bare:
         try:
-            repo.git.pull("origin", repo.active_branch)
+            repo.git.pull()
             print(f"Pulled latest changes from {repo.active_branch}")
         except Exception as e:
             print(
@@ -516,7 +530,6 @@ def check_if_page_loaded(driver):
 def getDriver(DOCKER=False):
     # Init webdriver options
     try:
-        service = ChromiumService(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
         options.add_argument("start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -524,23 +537,19 @@ def getDriver(DOCKER=False):
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-notifications")
+        options.add_argument("--log-level=3")
         if DOCKER:
             # Special Docker options
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-gpu")
-
         if DOCKER or HEADLESS:
             options.add_argument("--headless")
-
-        # Initialize WebDriver
         driver = webdriver.Chrome(
             options=options,
             # Docker uses specific chromedriver installed via apt
-            service=service if DOCKER else None,
+            service=ChromiumService("/usr/bin/chromedriver") if DOCKER else None,
         )
-
-        # Apply stealth settings
         stealth(
             driver=driver,
             platform="Win32",
@@ -549,7 +558,6 @@ def getDriver(DOCKER=False):
     except Exception as e:
         print(f"Error getting Driver: {e}")
         return None
-
     return driver
 
 
@@ -631,60 +639,83 @@ async def processQueue():
 
 
 async def getOTPCodeDiscord(
-    botObj: commands.Bot,
-    expected_user_id: int,
-    brokerName,
-    code_len=6,
-    timeout=60,
-    loop=None,
+    botObj: commands.Bot, brokerName, code_len=6, timeout=60, loop=None
 ):
-    # Fetch the user object using their ID
-    user = await botObj.fetch_user(expected_user_id)
-    if user is None:
-        printAndDiscord(f"Could not find user with ID {expected_user_id}", loop)
-        return None
-
-    # Send the OTP request message to the user's DMs
-    await user.send(f"{brokerName} requires an OTP code.")
-    await user.send(
-        f"Please enter the OTP code or type 'cancel' within {timeout} seconds."
+    printAndDiscord(f"{brokerName} requires OTP code", loop)
+    printAndDiscord(
+        f"Please enter OTP code or type cancel within {timeout} seconds", loop
     )
-
-    # printAndDiscord(f"<@{expected_user_id}> {brokerName} requires OTP code", loop)
-    # printAndDiscord(
-    #     f"<@{expected_user_id}> Please enter OTP code or type cancel within {timeout} seconds", loop
-    # )
-
     # Get OTP code from Discord
     while True:
         try:
             code = await botObj.wait_for(
                 "message",
-                check=lambda m: m.author.id == expected_user_id
-                and isinstance(m.channel, discord.DMChannel),
+                # Ignore bot messages and messages not in the correct channel
+                check=lambda m: m.author != botObj.user
+                and m.channel.id == int(os.getenv("DISCORD_CHANNEL")),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
-            # printAndDiscord(
-            #     f"Timed out waiting for OTP code input for {brokerName} <@{expected_user_id}>",
-            #     loop,
-            # )
-            await user.send(f"Timed out waiting for OTP code input for {brokerName}.")
+            printAndDiscord(
+                f"Timed out waiting for OTP code input for {brokerName}", loop
+            )
             return None
-
         if code.content.lower() == "cancel":
-            # printAndDiscord(
-            #     f"Cancelling OTP code for {brokerName} <@{expected_user_id}>", loop
-            # )
-            await user.send(f"Cancelling OTP code for {brokerName}.")
+            printAndDiscord(f"Cancelling OTP code for {brokerName}", loop)
             return None
-
-        # Ensure the OTP is numeric and of the correct length
-        if not code.content.isdigit() or len(code.content) != code_len:
-            await user.send(f"OTP code must be {code_len} digits.")
+        try:
+            # Check if code is numbers only
+            int(code.content)
+        except ValueError:
+            printAndDiscord("OTP code must be numbers only", loop)
             continue
-
+        # Check if code is correct length
+        if len(code.content) != code_len:
+            printAndDiscord(f"OTP code must be {code_len} digits", loop)
+            continue
         return code.content
+
+
+async def getUserInputDiscord(botObj: commands.Bot, prompt, timeout=60, loop=None):
+    printAndDiscord(prompt, loop)
+    printAndDiscord(
+        f"Please enter the input or type cancel within {timeout} seconds", loop
+    )
+    try:
+        code = await botObj.wait_for(
+            "message",
+            check=lambda m: m.author != botObj.user
+            and m.channel.id == int(DISCORD_CHANNEL),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        printAndDiscord("Timed out waiting for input", loop)
+        return None
+    if code.content.lower() == "cancel":
+        printAndDiscord("Input canceled by user", loop)
+        return None
+    return code.content
+
+
+async def send_captcha_to_discord(file):
+    BASE_URL = f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL}/messages"
+    HEADERS = {
+        "Authorization": f"Bot {DISCORD_TOKEN}",
+    }
+    files = {"file": ("captcha.png", file, "image/png")}
+    success = False
+    while not success:
+        response = requests.post(BASE_URL, headers=HEADERS, files=files)
+        if response.status_code == 200:
+            success = True
+        elif response.status_code == 429:
+            rate_limit = response.json()["retry_after"] * 2
+            await asyncio.sleep(rate_limit)
+        else:
+            print(
+                f"Error sending CAPTCHA image: {response.status_code}: {response.text}"
+            )
+            break
 
 
 def maskString(string):
@@ -696,62 +727,87 @@ def maskString(string):
     return masked
 
 
-async def printHoldings(
-    botObj: commands.Bot,
-    expected_user_id: int,
-    brokerObj: Brokerage,
-    loop=None,
-    mask=True,
-):
-    # Fetch the user object using their ID
-    try:
-        user = await botObj.fetch_user(expected_user_id)
-        if not user:
-            raise ValueError(f"Could not find user with ID {expected_user_id}")
-    except Exception as e:
-        printAndDiscord(str(e), loop)
-        return None
-
-    # Prepare embed for Discord message
-    embed = discord.Embed(title=f"{brokerObj.get_name()} Holdings", color=3447003)
-
+def printHoldings(brokerObj: Brokerage, loop=None, mask=True):
     # Helper function for holdings formatting
-
+    EMBED = {
+        "title": f"{brokerObj.get_name()} Holdings",
+        "color": 3447003,
+        "fields": [],
+    }
     print(
         f"==============================\n{brokerObj.get_name()} Holdings\n=============================="
     )
-
     for key in brokerObj.get_account_numbers():
         for account in brokerObj.get_account_numbers(key):
             acc_name = f"{key} ({maskString(account) if mask else account})"
-            field_value = ""
+            field = {
+                "name": acc_name,
+                "inline": False,
+            }
             print(acc_name)
-
+            print_string = ""
             holdings = brokerObj.get_holdings(key, account)
-            if not holdings:
-                field_value = "No holdings in Account\n"
+            if holdings == {}:
+                print_string += "No holdings in Account\n"
             else:
-                for stock, details in holdings.items():
-                    quantity = details["quantity"]
-                    price = details["price"]
-                    total = details["total"]
-                    field_value += f"{stock}: {quantity} @ ${format(price, '0.2f')} = ${format(total, '0.2f')}\n"
-
-            total_value = brokerObj.get_account_totals(key, account)
-            field_value += f"Total: ${format(total_value, '0.2f')}\n"
-            print(field_value)
-
-            # Truncate the field value if it exceeds Discord's embed limit
-            field_value = (
-                field_value[:1020] + "..." if len(field_value) > 1024 else field_value
+                for stock in holdings:
+                    quantity = holdings[stock]["quantity"]
+                    price = holdings[stock]["price"]
+                    total = holdings[stock]["total"]
+                    print_string += f"{stock}: {quantity} @ ${format(price, '0.2f')} = ${format(total, '0.2f')}\n"
+            print_string += f"Total: ${format(brokerObj.get_account_totals(key, account), '0.2f')}\n"
+            print(print_string)
+            # If somehow longer than 1024, chop and add ...
+            field["value"] = (
+                print_string[:1020] + "..."
+                if len(print_string) > 1024
+                else print_string
             )
-
-            embed.add_field(name=acc_name, value=field_value, inline=False)
-
-    # Send the embed message to the user
-    try:
-        await user.send(embed=embed)
-    except Exception as e:
-        printAndDiscord(f"Failed to send message: {str(e)}", loop)
-
+            EMBED["fields"].append(field)
+    printAndDiscord(EMBED, loop, True)
     print("==============================")
+
+
+def save_cookies(driver, filename, path=None, important_cookies=None):
+    if path is not None:
+        filename = os.path.join(path, filename)
+    if path is not None and not os.path.exists(path):
+        os.makedirs(path)
+    cookies = driver.get_cookies()
+    if important_cookies is not None:
+        # Save only the important cookies
+        cookies_to_save = [
+            cookie for cookie in cookies if cookie["name"] in important_cookies
+        ]
+    else:
+        # Save all cookies
+        cookies_to_save = cookies
+    # Save cookies to a pickle file
+    with open(filename, "wb") as f:
+        pickle.dump(cookies_to_save, f)
+
+
+def load_cookies(driver, filename, path=None):
+    if path is not None:
+        filename = os.path.join(path, filename)
+    if not os.path.exists(filename):
+        return False
+    try:
+        with open(filename, "rb") as f:
+            cookies = pickle.load(f)
+        for cookie in cookies:
+            try:
+                driver.add_cookie(cookie)
+            except Exception:
+                continue
+        return True
+    except Exception as e:
+        print(f"Error loading cookies: {e}")
+        return False
+
+
+def clear_cookies(driver, important_cookies=None):
+    cookies = driver.get_cookies()
+    for cookie in cookies:
+        if important_cookies is None or cookie["name"] not in important_cookies:
+            driver.delete_cookie(cookie["name"])

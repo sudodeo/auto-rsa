@@ -31,6 +31,7 @@ try:
 
     # Custom API libraries
     from chaseAPI import *
+    from dspacAPI import *
     from fennelAPI import *
     from fidelityAPI import *
     from firstradeAPI import *
@@ -71,6 +72,7 @@ cipher_suite = Fernet(key)
 # Global variables
 SUPPORTED_BROKERS = [
     "chase",
+    "dspac",
     "fennel",
     "fidelity",
     "firstrade",
@@ -84,6 +86,7 @@ SUPPORTED_BROKERS = [
 ]
 DAY1_BROKERS = [
     "chase",
+    "dspac",
     "fennel",
     "firstrade",
     "public",
@@ -100,6 +103,8 @@ DATABASE_NAME = "rsa_bot_users.db"
 
 # Account nicknames
 def nicknames(broker):
+    if broker == "ds":
+        return "dspac"
     if broker in ["fid", "fido"]:
         return "fidelity"
     if broker == "ft":
@@ -187,7 +192,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                 try:
                     # Initialize broker
                     fun_name = broker + init_command
-                    if broker.lower() in ["fennel", "firstrade", "public"]:
+                    if broker.lower() in ["dspac", "fennel", "firstrade", "public"]:
                         # Requires bot object and loop
                         result = await globals()[fun_name](
                             API_METADATA=API_METADATA,
