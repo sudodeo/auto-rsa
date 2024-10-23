@@ -40,8 +40,7 @@ def robinhood_init(API_METADATA=None):
     # Log in to Robinhood account
     all_account_numbers = []
     for account in RH:
-        index = RH.index(account) + 1
-        name = f"{CURRENT_USER_ID}-Robinhood {index}"
+        name = f"{CURRENT_USER_ID}-Robinhood"
         print(f"Logging in to {name}...")
         try:
             account = account.split(":")
@@ -90,10 +89,35 @@ async def robinhood_holdings(
     botObj=None,
 ):
     CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
+    name = f"{CURRENT_USER_ID}-Robinhood"
     for key in rho.get_account_numbers():
         for account in rho.get_account_numbers(key):
             obj: rh = rho.get_logged_in_objects(key)
-            login_with_cache(pickle_path="./creds/", pickle_name=key)
+
+            pickle_path = f"./creds/{CURRENT_USER_ID}/"
+            pickle_file = os.path.join(pickle_path, key) + ".pickle"
+
+            # Check if pickle file exists
+            if os.path.isfile(pickle_file):
+                login_with_cache(pickle_path=pickle_path, pickle_name=key)
+            else:
+                try:
+                    creds = creds.split(":")
+                    rh.login(
+                        username=creds[0],
+                        password=creds[1],
+                        mfa_code=(
+                            None if creds[2].upper() == "NA" else pyotp.TOTP(creds[2]).now()
+                        ),
+                        store_session=True,
+                        expiresIn=86400 * 30,  # 30 days
+                        pickle_path=pickle_path,
+                        pickle_name=name,
+                    )
+                    rho.set_logged_in_object(name, rh)
+                except Exception as e:
+                    print(traceback.format_exc())
+                    continue
             try:
                 # Get account holdings
                 positions = obj.get_open_stock_positions(account_number=account)
