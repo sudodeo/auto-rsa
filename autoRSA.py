@@ -248,7 +248,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                             )
                         elif second_command == "_transaction":
                             fun_name = broker + second_command
-                            globals()[fun_name](
+                            await globals()[fun_name](
                                 logged_in_broker,
                                 orderObj,
                                 loop,
@@ -383,7 +383,7 @@ class TaskManager:
         # stop_flag = asyncio.Event()
         # self.stop_flags[task_id] = stop_flag
         task = func,args, kwargs
-        self.queue.put(task)
+        await self.queue.put(task)
 
 
     # Method to process a single task from the queue
