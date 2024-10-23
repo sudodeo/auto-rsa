@@ -226,8 +226,14 @@ def tradier_transaction(tradier_o: Brokerage, orderObj: stockOrder, loop=None):
                                 loop=loop,
                             )
                             continue
+                        e="null"
+                        if json_response:
+                            errors = ". ".join(
+                                json_response.get("errors", {}).get("error", [])
+                            )
+                            e = errors
                         printAndDiscord(
-                            f"Tradier account {print_account} Error: This order did not route. JSON response: {json.dumps(json_response, indent=2)}",
+                            f"Tradier account {print_account} Error: This order did not route. JSON response: {e}",
                             loop=loop,
                         )
                     except Exception as e:
