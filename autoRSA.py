@@ -336,38 +336,88 @@ def argParser(args: list) -> stockOrder:
     return orderObj
 
 
-class TaskManager:
-    def __init__(self):
-        self.tasks = {}  # Dictionary to keep track of running tasks
-        self.stop_flags = {}  # Dictionary to keep track of stop flags
+# class TaskManager:
+#     def __init__(self):
+#         self.tasks = {}  # Dictionary to keep track of running tasks
+#         self.stop_flags = {}  # Dictionary to keep track of stop flags
 
-    async def add_task(self, task_id, func, *args, **kwargs):
+#     async def add_task(self, task_id, func, *args, **kwargs):
+#         """Add a task to the queue and start it immediately."""
+#         # stop_flag = asyncio.Event()
+#         # self.stop_flags[task_id] = stop_flag
+#         task = asyncio.create_task(func( *args, **kwargs))
+#         self.tasks[task_id] = task
+#         print(f'Task {task_id} started.')
+
+#     # async def stop_task(self, task_id):
+#     #     """Stop a task if it's running."""
+#     #     if task_id in self.tasks:
+#     #         stop_flag = self.stop_flags[task_id]
+#     #         stop_flag.set()  # Set the stop flag for the task
+#     #         print(f'Task {task_id} is stopping.')
+
+#     async def wait_for_all_tasks(self):
+#         """Wait for all tasks to complete."""
+#         for task_id, task in self.tasks.items():
+#             if not task.done():
+#                 await task  # Wait for each task to complete
+#                 print(f'Task {task_id} has completed.')
+
+
+
+class TaskManager:
+    def __init__(self,max_running_tasks):
+        self.queue = asyncio.Queue()
+        self.workers = []  # Store references to created tasks (workers)
+        self.max_running_tasks = max_running_tasks
+        self.task_count = 0
+
+    # Method to add a new task
+    # async def add_task(self, task_name):
+    #     print(f'Adding task: {task_name}')
+    #     await self.queue.put(self.perform_task(task_name))
+
+
+    async def add_task(self,  func, *args, **kwargs):
         """Add a task to the queue and start it immediately."""
         # stop_flag = asyncio.Event()
         # self.stop_flags[task_id] = stop_flag
-        task = asyncio.create_task(func( *args, **kwargs))
-        self.tasks[task_id] = task
-        print(f'Task {task_id} started.')
+        task = func,args, kwargs
+        self.queue.put(task)
 
-    # async def stop_task(self, task_id):
-    #     """Stop a task if it's running."""
-    #     if task_id in self.tasks:
-    #         stop_flag = self.stop_flags[task_id]
-    #         stop_flag.set()  # Set the stop flag for the task
-    #         print(f'Task {task_id} is stopping.')
 
-    async def wait_for_all_tasks(self):
-        """Wait for all tasks to complete."""
-        for task_id, task in self.tasks.items():
-            if not task.done():
-                await task  # Wait for each task to complete
-                print(f'Task {task_id} has completed.')
+    # Method to process a single task from the queue
+    async def worker(self):
+        
+        while True:
+            if self.task_count<self.max_running_tasks:
+                func,args, kwargs = await self.queue.get()
+                asyncio.create_task(self.run_task(func,args, kwargs))
+                # await task  # Call the task function
+                self.task_count = self.task_count + 1
+            else:
+                await asyncio.sleep(1000)
+
+
+    # Method to run all workers to process the queue
+    async def run_task(self,  func, *args, **kwargs):
+        # Start workers (process tasks from the queue)
+        await func( *args, **kwargs)
+        self.queue.task_done()
+        self.task_count = self.task_count - 1
+
+    # Method to stop a specific worker (if it's still running)
+    async def stop_task(self):
+        pass
 
 
 async def main():
     global DANGER_MODE, DOCKER_MODE, DISCORD_BOT
 
-    task_manager = TaskManager()
+    task_manager = TaskManager(3)
+
+    asyncio.create_task(task_manager.worker())
+
     # Determine if ran from command line
     if len(sys.argv) == 1:  # If no arguments, do nothing
         print("No arguments given, see README for usage")
@@ -421,13 +471,12 @@ async def main():
         # Get holdings or complete transaction
         if cliOrderObj.get_holdings():
             # await fun_run(cliOrderObj, ("_init", "_holdings"))
-            task_id = str(uuid.uuid4())
-            await task_manager.add_task(task_id, fun_run, cliOrderObj, ("_init", "_holdings"))
+            await task_manager.add_task( fun_run, cliOrderObj, ("_init", "_holdings"))
 
         else:
             # await fun_run(cliOrderObj, ("_init", "_transaction"))
-            task_id = str(uuid.uuid4())
-            await task_manager.add_task(task_id, fun_run, cliOrderObj, ("_init", "_transaction"))
+            
+            await task_manager.add_task( fun_run, cliOrderObj, ("_init", "_transaction"))
 
 
     # If discord bot, run discord bot
@@ -555,8 +604,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL
                         # bot,
                         # event_loop,
                     # )
-                    task_id = str(uuid.uuid4())
-                    await task_manager.add_task(task_id, fun_run, author_id, discOrdObj,("_init", "_holdings"), bot,event_loop)
+                    await task_manager.add_task( fun_run, author_id, discOrdObj,("_init", "_holdings"), bot,event_loop)
 
                 else:
                     # Run Transaction
@@ -567,8 +615,7 @@ Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL
                     #     bot,
                     #     event_loop,
                     # )
-                    task_id = str(uuid.uuid4())
-                    await task_manager.add_task(task_id, fun_run, author_id, discOrdObj,("_init", "_transaction"), bot,event_loop)
+                    await task_manager.add_task( fun_run, author_id, discOrdObj,("_init", "_transaction"), bot,event_loop)
 
 
             except Exception as err:
