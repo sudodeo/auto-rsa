@@ -7,7 +7,7 @@ import os
 import sys
 import aiosqlite
 import traceback
-
+import uuid
 import discord.ext.commands
 import discord.ext
 from cryptography.fernet import Fernet
@@ -336,9 +336,38 @@ def argParser(args: list) -> stockOrder:
     return orderObj
 
 
+class TaskManager:
+    def __init__(self):
+        self.tasks = {}  # Dictionary to keep track of running tasks
+        self.stop_flags = {}  # Dictionary to keep track of stop flags
+
+    async def add_task(self, task_id, func, *args, **kwargs):
+        """Add a task to the queue and start it immediately."""
+        # stop_flag = asyncio.Event()
+        # self.stop_flags[task_id] = stop_flag
+        task = asyncio.create_task(func( *args, **kwargs))
+        self.tasks[task_id] = task
+        print(f'Task {task_id} started.')
+
+    # async def stop_task(self, task_id):
+    #     """Stop a task if it's running."""
+    #     if task_id in self.tasks:
+    #         stop_flag = self.stop_flags[task_id]
+    #         stop_flag.set()  # Set the stop flag for the task
+    #         print(f'Task {task_id} is stopping.')
+
+    async def wait_for_all_tasks(self):
+        """Wait for all tasks to complete."""
+        for task_id, task in self.tasks.items():
+            if not task.done():
+                await task  # Wait for each task to complete
+                print(f'Task {task_id} has completed.')
+
+
 async def main():
     global DANGER_MODE, DOCKER_MODE, DISCORD_BOT
 
+    task_manager = TaskManager()
     # Determine if ran from command line
     if len(sys.argv) == 1:  # If no arguments, do nothing
         print("No arguments given, see README for usage")
@@ -391,9 +420,15 @@ async def main():
 
         # Get holdings or complete transaction
         if cliOrderObj.get_holdings():
-            await fun_run(cliOrderObj, ("_init", "_holdings"))
+            # await fun_run(cliOrderObj, ("_init", "_holdings"))
+            task_id = str(uuid.uuid4())
+            await task_manager.add_task(task_id, fun_run, cliOrderObj, ("_init", "_holdings"))
+
         else:
-            await fun_run(cliOrderObj, ("_init", "_transaction"))
+            # await fun_run(cliOrderObj, ("_init", "_transaction"))
+            task_id = str(uuid.uuid4())
+            await task_manager.add_task(task_id, fun_run, cliOrderObj, ("_init", "_transaction"))
+
 
     # If discord bot, run discord bot
     if DISCORD_BOT:
@@ -513,23 +548,28 @@ Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL
                 # Get holdings or complete transaction
                 if discOrdObj.get_holdings():
                     # Run Holdings
-                    await fun_run(
-                        author_id,
-                        discOrdObj,
-                        ("_init", "_holdings"),
-                        bot,
-                        event_loop,
-                    )
+                    # await fun_run(
+                        # author_id,
+                        # discOrdObj,
+                        # ("_init", "_holdings"),
+                        # bot,
+                        # event_loop,
+                    # )
+                    task_id = str(uuid.uuid4())
+                    await task_manager.add_task(task_id, fun_run, author_id, discOrdObj,("_init", "_holdings"), bot,event_loop)
 
                 else:
                     # Run Transaction
-                    await fun_run(
-                        author_id,
-                        discOrdObj,
-                        ("_init", "_transaction"),
-                        bot,
-                        event_loop,
-                    )
+                    # await fun_run(
+                    #     author_id,
+                    #     discOrdObj,
+                    #     ("_init", "_transaction"),
+                    #     bot,
+                    #     event_loop,
+                    # )
+                    task_id = str(uuid.uuid4())
+                    await task_manager.add_task(task_id, fun_run, author_id, discOrdObj,("_init", "_transaction"), bot,event_loop)
+
 
             except Exception as err:
                 print(traceback.format_exc())
