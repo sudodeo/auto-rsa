@@ -248,7 +248,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
                             )
                         elif second_command == "_transaction":
                             fun_name = broker + second_command
-                            globals()[fun_name](
+                            await globals()[fun_name](
                                 logged_in_broker,
                                 orderObj,
                                 loop,
