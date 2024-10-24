@@ -382,7 +382,7 @@ class TaskManager:
         """Add a task to the queue and start it immediately."""
         # stop_flag = asyncio.Event()
         # self.stop_flags[task_id] = stop_flag
-        task = func,args, kwargs
+        task =( func,args, kwargs)
         await self.queue.put(task)
 
 
@@ -392,7 +392,8 @@ class TaskManager:
         while True:
             if self.task_count<self.max_running_tasks:
                 func,args, kwargs = await self.queue.get()
-                asyncio.create_task(self.run_task(func,args, kwargs))
+                asyncio.create_task(self.run_task(func,*args, **kwargs))
+
                 # await task  # Call the task function
                 self.task_count = self.task_count + 1
             else:
