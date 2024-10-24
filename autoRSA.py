@@ -275,7 +275,7 @@ async def fun_run(author_id, orderObj: stockOrder, command, botObj=None, loop=No
 
 
 # Parse input arguments and update the order object
-def argParser(args: list) -> stockOrder:
+async def argParser(args: list) -> stockOrder:
     args = [x.lower() for x in args]
     # Initialize order object
     orderObj = stockOrder()
@@ -444,7 +444,7 @@ async def main():
         check_package_versions()
         print("Running bot from command line")
         print()
-        cliOrderObj = argParser(sys.argv[1:])
+        cliOrderObj = await argParser(sys.argv[1:])
         if not cliOrderObj.get_holdings():
             print(f"Action: {cliOrderObj.get_action()}")
             print(f"Amount: {cliOrderObj.get_amount()}")
@@ -471,12 +471,12 @@ async def main():
         # Get holdings or complete transaction
         if cliOrderObj.get_holdings():
             # await fun_run(cliOrderObj, ("_init", "_holdings"))
-            await task_manager.add_task( fun_run, cliOrderObj, ("_init", "_holdings"))
+            await task_manager.add_task( fun_run,None, cliOrderObj, ("_init", "_holdings"))
 
         else:
             # await fun_run(cliOrderObj, ("_init", "_transaction"))
             
-            await task_manager.add_task( fun_run, cliOrderObj, ("_init", "_transaction"))
+            await task_manager.add_task( fun_run,None, cliOrderObj, ("_init", "_transaction"))
 
 
     # If discord bot, run discord bot
@@ -588,7 +588,8 @@ Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL
         )
         async def rsa(ctx, *args):
             await ensure_db_connection()
-            discOrdObj = await bot.loop.run_in_executor(None, argParser, args)
+            discOrdObj = await argParser( args)
+            
             event_loop = asyncio.get_event_loop()
             try:
                 author_id = ctx.author.id
