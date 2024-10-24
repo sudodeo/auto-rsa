@@ -17,27 +17,40 @@ from helperAPI import (
     stockOrder,
 )
 
-
-def dspac_init(DSPAC_EXTERNAL=None, botObj=None, loop=None):
+async def dspac_init(API_METADATA=None, botObj=None, loop=None):
     load_dotenv()
-    dspac_obj = Brokerage("DSPAC")
-    if not os.getenv("DSPAC") and DSPAC_EXTERNAL is None:
+    if API_METADATA:
+        EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
+        CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
+    if not os.getenv("FIRSTRADE") and EXTERNAL_CREDENTIALS is None:
+        print("Firstrade not found, skipping...")
+        return None
+    accounts = (
+        os.environ["DSPAC"].strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
+    )
+
+    print(f"Logging in to Firstrade for user {CURRENT_USER_ID}...")
+
+    dspac_obj =await Brokerage("DSPAC")
+    if not os.getenv("DSPAC") and EXTERNAL_CREDENTIALS is None:
         print("DSPAC not found, skipping...")
         return None
     DSPAC = (
         os.environ["DSPAC"].strip().split(",")
-        if DSPAC_EXTERNAL is None
-        else DSPAC_EXTERNAL.strip().split(",")
+        if EXTERNAL_CREDENTIALS is None
+        else EXTERNAL_CREDENTIALS.strip().split(",")
     )
     print("Logging in to DSPAC...")
     for index, account in enumerate(DSPAC):
-        name = f"DSPAC {index + 1}"
+        name = f"{CURRENT_USER_ID}-Dspac {index + 1}"
         try:
             user, password = account.split(":")[:2]
             use_email = "@" in user
             # Initialize the DSPAC API object
             ds = DSPACAPI(
-                user, password, filename=f"DSPAC_{index + 1}.pkl", creds_path="./creds/"
+                user, password, filename=f"DSPAC_{CURRENT_USER_ID}_{index + 1}.pkl", creds_path="./creds/{CURRENT_USER_ID}/"
             )
             ds.make_initial_request()
             # All the rest of the requests responsible for getting authenticated
@@ -61,8 +74,7 @@ def dspac_init(DSPAC_EXTERNAL=None, botObj=None, loop=None):
     print("Logged into DSPAC!")
     return dspac_obj
 
-
-def login(ds: DSPACAPI, botObj, name, loop, use_email):
+async def login(ds: DSPACAPI, CURRENT_USER_ID, botObj, name, loop, use_email):
     try:
         # API call to generate the login ticket
         if use_email:
@@ -82,8 +94,8 @@ def login(ds: DSPACAPI, botObj, name, loop, use_email):
                 raise Exception("Error solving SMS or Captcha")
             # Get the OTP code from the user
             if botObj is not None and loop is not None:
-                otp_code = asyncio.run_coroutine_threadsafe(
-                    getOTPCodeDiscord(botObj, name, timeout=300, loop=loop),
+                otp_code = asyncio.run_coroutine_threadsafe(await
+                    getOTPCodeDiscord(botObj, CURRENT_USER_ID, name, timeout=300, loop=loop),
                     loop,
                 ).result()
             else:
@@ -118,7 +130,7 @@ def login(ds: DSPACAPI, botObj, name, loop, use_email):
         return False
 
 
-def handle_captcha_and_sms(ds: DSPACAPI, botObj, data, loop, name, use_email):
+async def handle_captcha_and_sms(ds: DSPACAPI, botObj, data, loop, name, use_email):
     try:
         # If CAPTCHA is needed it will generate an SMS code as well
         if data.get("needCaptchaCode", False):
@@ -140,7 +152,7 @@ def handle_captcha_and_sms(ds: DSPACAPI, botObj, data, loop, name, use_email):
         return False
 
 
-def solve_captcha(ds: DSPACAPI, botObj, name, loop, use_email):
+async def solve_captcha(ds: DSPACAPI, botObj, name, loop, use_email):
     try:
         captcha_image = ds.request_captcha()
         if not captcha_image:
@@ -183,7 +195,7 @@ def solve_captcha(ds: DSPACAPI, botObj, name, loop, use_email):
         return None
 
 
-def send_sms_code(ds: DSPACAPI, name, use_email, captcha_input=None):
+async def send_sms_code(ds: DSPACAPI, name, use_email, captcha_input=None):
     if use_email:
         sms_code_response = ds.request_email_code(captcha_input=captcha_input)
     else:
@@ -194,7 +206,8 @@ def send_sms_code(ds: DSPACAPI, name, use_email, captcha_input=None):
     return sms_code_response
 
 
-def dspac_holdings(ds: Brokerage, loop=None):
+async def dspac_holdings(ds: Brokerage, loop=None,  API_METADATA=None,  botObj=None):
+    CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
     for key in ds.get_account_numbers():
         for account in ds.get_account_numbers(key):
             obj: DSPACAPI = ds.get_logged_in_objects(key, "ds")
@@ -212,10 +225,11 @@ def dspac_holdings(ds: Brokerage, loop=None):
                 printAndDiscord(f"Error getting DSPAC holdings: {e}")
                 print(traceback.format_exc())
                 continue
-    printHoldings(ds, loop, False)
+    printHoldings(ds, botObj,
+        CURRENT_USER_ID, loop, False)
 
 
-def dspac_transaction(ds: Brokerage, orderObj: stockOrder, loop=None):
+async def dspac_transaction(ds: Brokerage, orderObj: stockOrder, loop=None):
     print()
     print("==============================")
     print("DSPAC")
