@@ -802,9 +802,6 @@ async def fidelity_init(
         print(f"Error logging in to Fidelity: {e}")
         print(traceback.format_exc())
         return None
-    finally:
-        if fidelity_browser is not None:
-            await fidelity_browser.close_browser()
 
 
 async def fidelity_holdings(
