@@ -578,9 +578,9 @@ Refer to this channel to get info on how to use the **RSA bot:** <#{HELP_CHANNEL
                             "Invalid credentials. Just enter your email for Fennel."
                         )
                 elif broker =="Dspac":
-                    if len(credentials.split(":")) != 1:
+                    if len(credentials.split(":")) != 2:
                         raise Exception(
-                            "Invalid credentials. Use this format for Dspac: email:password"
+                            "Invalid credentials. Use this format for Dspac: username:password"
                         )
                 elif broker == "robinhood":
                     if len(credentials.split(":")) != 3:

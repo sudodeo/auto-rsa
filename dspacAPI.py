@@ -22,8 +22,8 @@ async def dspac_init(API_METADATA=None, botObj=None, loop=None):
     if API_METADATA:
         EXTERNAL_CREDENTIALS = API_METADATA.get("EXTERNAL_CREDENTIALS")
         CURRENT_USER_ID = API_METADATA.get("CURRENT_USER_ID")
-    if not os.getenv("FIRSTRADE") and EXTERNAL_CREDENTIALS is None:
-        print("Firstrade not found, skipping...")
+    if not os.getenv("DSPAC") and EXTERNAL_CREDENTIALS is None:
+        print("Dspac not found, skipping...")
         return None
     accounts = (
         os.environ["DSPAC"].strip().split(",")
@@ -31,7 +31,7 @@ async def dspac_init(API_METADATA=None, botObj=None, loop=None):
         else EXTERNAL_CREDENTIALS.strip().split(",")
     )
 
-    print(f"Logging in to Firstrade for user {CURRENT_USER_ID}...")
+    print(f"Logging in to Dspac for user {CURRENT_USER_ID}...")
 
     dspac_obj = Brokerage("DSPAC")
     if not os.getenv("DSPAC") and EXTERNAL_CREDENTIALS is None:
