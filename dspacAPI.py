@@ -54,7 +54,7 @@ async def dspac_init(API_METADATA=None, botObj=None, loop=None):
             )
             ds.make_initial_request()
             # All the rest of the requests responsible for getting authenticated
-            login(ds, botObj, name, loop, use_email)
+            login(ds, CURRENT_USER_ID, botObj, name, loop, use_email)
             account_assets = ds.get_account_assets()
             account_info = ds.get_account_info()
             account_number = str(account_info["Data"]["accountNumber"])
