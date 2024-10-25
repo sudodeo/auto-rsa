@@ -33,7 +33,7 @@ async def dspac_init(API_METADATA=None, botObj=None, loop=None):
 
     print(f"Logging in to Firstrade for user {CURRENT_USER_ID}...")
 
-    dspac_obj =await Brokerage("DSPAC")
+    dspac_obj = Brokerage("DSPAC")
     if not os.getenv("DSPAC") and EXTERNAL_CREDENTIALS is None:
         print("DSPAC not found, skipping...")
         return None
@@ -225,7 +225,7 @@ async def dspac_holdings(ds: Brokerage, loop=None,  API_METADATA=None,  botObj=N
                 printAndDiscord(f"Error getting DSPAC holdings: {e}")
                 print(traceback.format_exc())
                 continue
-    printHoldings(ds, botObj,
+    await printHoldings(ds, botObj,
         CURRENT_USER_ID, loop, False)
 
 
